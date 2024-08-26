@@ -9,14 +9,19 @@ TagManager:
   - Wall
   - Female
   - Male
+  - Arch
+  - Column
+  - Gate
+  - Floor
+  - Stairs
   layers:
   - Default
   - TransparentFX
   - Ignore Raycast
-  - 
+  - Ground
   - Water
   - UI
-  - 
+  - Pickable
   - 
   - 
   - 

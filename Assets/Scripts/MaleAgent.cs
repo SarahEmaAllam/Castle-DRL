@@ -25,6 +25,14 @@ public class MaleAgent : Agent
     {
         rb = GetComponent<Rigidbody>();
         envMaterial = env.GetComponent<Renderer>().material;
+        // Add rotation constraints to prevent rotation on the x and z axes
+        rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+    
+        // If you want to also freeze position on the y-axis (preventing vertical movement)
+        // rb.constraints |= RigidbodyConstraints.FreezePositionY;
+
+        // Ensure collision detection is set to Continuous to avoid falling through the floor
+        rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
     }
     
 
@@ -54,8 +62,12 @@ public class MaleAgent : Agent
 
         float moveRotate = actions.ContinuousActions[0];
         float moveForward = actions.ContinuousActions[1];
-        rb.MovePosition(transform.position + transform.forward * moveForward * moveSpeed * Time.deltaTime);
-        transform.Rotate(0f, moveRotate * moveSpeed, 0f, Space.Self);
+        Vector3 moveDirection = transform.forward * moveForward * moveSpeed * Time.deltaTime;
+        rb.MovePosition(transform.position + moveDirection);
+
+        // Rotate the agent
+        float rotationAngle = moveRotate * moveSpeed * Time.deltaTime; // Ensure rotation is frame-rate independent
+        rb.MoveRotation(rb.rotation * Quaternion.Euler(0f, rotationAngle * moveSpeed, 0f)); 
         
         // Vector3 velocity = new Vector3(moveX, 0, moveZ);
         // velocity = velocity.normalized  * Time.deltaTime * moveSpeed;
@@ -78,7 +90,6 @@ public class MaleAgent : Agent
             
             AddReward(30f);
             classObject.AddReward(-30f);
-            Debug.Log("Caught Female");
             envMaterial.color = Color.yellow;
             // end the caught agent's episode
             classObject.EndEpisode();

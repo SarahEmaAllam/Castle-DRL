@@ -59,9 +59,25 @@ PrefabInstance:
       propertyPath: m_Name
       value: MaleAgent Variant
       objectReference: {fileID: 0}
+    - target: {fileID: 9095062556262540518, guid: 542dfe73c929a6e41b462471c97ba62d, type: 3}
+      propertyPath: m_TagString
+      value: Male
+      objectReference: {fileID: 0}
+    - target: {fileID: 9095062556262540526, guid: 542dfe73c929a6e41b462471c97ba62d, type: 3}
+      propertyPath: TeamId
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 9095062556262540526, guid: 542dfe73c929a6e41b462471c97ba62d, type: 3}
       propertyPath: m_BehaviorName
-      value: Male Agent
+      value: MaleAgentV2
+      objectReference: {fileID: 0}
+    - target: {fileID: 9095062556262540526, guid: 542dfe73c929a6e41b462471c97ba62d, type: 3}
+      propertyPath: m_BrainParameters.VectorObservationSize
+      value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 9095062556262540526, guid: 542dfe73c929a6e41b462471c97ba62d, type: 3}
+      propertyPath: m_BrainParameters.m_ActionSpec.BranchSizes.Array.data[0]
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 9095062556262540527, guid: 542dfe73c929a6e41b462471c97ba62d, type: 3}
       propertyPath: env
@@ -105,7 +121,21 @@ MonoBehaviour:
   hasUpgradedFromAgentParameters: 1
   MaxStep: 0
   moveSpeed: 5
-  envLocation: {fileID: 0}
-  env: {fileID: 0}
-  female: {fileID: 0}
-  classObject: {fileID: 0}
+  envLocation: {fileID: 1112462576901099761, guid: fe77c2f772243df48926cb795290de74, type: 3}
+  env: {fileID: 7553522604769288888, guid: 8f78a7abc3321934ab6662cffb6994cc, type: 3}
+  female: {fileID: 9095062556262540518, guid: 542dfe73c929a6e41b462471c97ba62d, type: 3}
+  classObject: {fileID: 9095062556262540527, guid: 542dfe73c929a6e41b462471c97ba62d, type: 3}
+--- !u!114 &535160338935543473
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9076019665636924471}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3a5c9d521e5ef4759a8246a07d52221e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  DecisionPeriod: 5
+  TakeActionsBetweenDecisions: 1

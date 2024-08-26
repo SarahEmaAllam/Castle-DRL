@@ -107,9 +107,7 @@ public class CastleAgent : Agent
         
         foreach (var target in targetsToDelete)
         {
-            Debug.Log("before DEBUG");
             Destroy(target.gameObject);
-            Debug.Log("afyter DEBUG");
         }
         targetsToDelete.Clear();
     }
@@ -134,15 +132,14 @@ public class CastleAgent : Agent
 
     public override void OnActionReceived(ActionBuffers actions)
     {
-
         float moveRotate = actions.ContinuousActions[0];
         float moveForward = actions.ContinuousActions[1];
-        rb.MovePosition(transform.position + transform.forward * moveForward * moveSpeed * Time.deltaTime);
-        transform.Rotate(0f, moveRotate * moveSpeed, 0f, Space.Self);
+        // rb.MovePosition(transform.position + transform.forward * moveForward * moveSpeed * Time.deltaTime);
+        // transform.Rotate(0f, moveRotate * moveSpeed, 0f, Space.Self);
         
-        // Vector3 velocity = new Vector3(moveX, 0, moveZ);
-        // velocity = velocity.normalized  * Time.deltaTime * moveSpeed;
-        // transform.position += velocity;
+        Vector3 velocity = new Vector3(moveRotate, 0, moveForward);
+        velocity = velocity.normalized  * Time.deltaTime * moveSpeed;
+        transform.position += velocity;
 
     }
 
@@ -163,8 +160,6 @@ public class CastleAgent : Agent
             AddReward(10f);
             
             
-            // Debug.Log("FOUND TARGET");
-            Debug.Log(GetCumulativeReward());
             if (spawnedTargetList.Count == 0)
             {
                 envMaterial.color = Color.green;
@@ -181,7 +176,7 @@ public class CastleAgent : Agent
             removeTarget(spawnedTargetList);
             AddReward(-10f);
             // Debug.Log("hit wall");
-            Debug.Log(GetCumulativeReward());
+            // Debug.Log(GetCumulativeReward());
             EndEpisode();
             
         }
