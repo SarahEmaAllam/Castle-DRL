@@ -20,11 +20,11 @@ behaviors:
         gamma: 0.99
         strength: 1.0
     keep_checkpoints: 5
-    max_steps: 100000
+    max_steps: 1000000
     time_horizon: 64
     summary_freq: 100
   MaleAgentV:
-    trainer_type: ppo
+    trainer_type: poca
     hyperparameters:
       batch_size: 1024
       buffer_size: 10240
@@ -44,11 +44,11 @@ behaviors:
         gamma: 0.99
         strength: 1.0
     keep_checkpoints: 5
-    max_steps: 100000
+    max_steps: 1000000
     time_horizon: 64
     summary_freq: 100
   FemaleAgent:
-    trainer_type: ppo
+    trainer_type: poca
     hyperparameters:
       batch_size: 1024
       buffer_size: 10240
@@ -68,6 +68,6 @@ behaviors:
         gamma: 0.99
         strength: 1.0
     keep_checkpoints: 5
-    max_steps: 100001
+    max_steps: 1000000
     time_horizon: 64
     summary_freq: 10000

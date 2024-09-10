@@ -13,12 +13,15 @@ public class MaleAgentV2 : Agent
     // target variables for builing
     [SerializeField] private Transform buildTransform;
     // [SerializeField] private List<GameObject> spawnedBuildList = new List<GameObject>();
-    // public int buildCount;
-    // public GameObject bricks;
+    
+    private const float brickCostPerObject = 1000f;
+    private string[] propNames = { "floor", "floorStairs", "column_mini" }; // List of props
+    
     // private float RAY_RANGE = 5f;
     
     // agent variables
-    [SerializeField] private float moveSpeed;
+    [SerializeField] private float moveSpeed = 1.0f;
+    private float rotateSpeed = 100f;
     private Rigidbody rb;
     // [SerializeField]
     // private LayerMask pickableLayerMask;
@@ -33,22 +36,42 @@ public class MaleAgentV2 : Agent
     // private RayPerceptionSensorComponent3D rayPerception;
     // Reference to the picked-up object
     private GameObject pickedUpObject;
+    private GameObject objectToDestroy = null;
+    private bool canDestroy = false;
     private bool canPickUp = false;
+    private bool canBuild = true;
+    // Class-level variable to store the original rotation of the picked-up object
+    private Quaternion originalRotation;
     
     // env variables
-    private CastleArea agentArea;
+    private CastleArea castleArea;
     [SerializeField] private Transform envLocation;
     Material envMaterial;
     public GameObject env;
     public GameObject female;
     public CastleAgent classObject;
+    
+    // multi agents setup
+    private SimpleMultiAgentGroup m_AgentGroup; // Multi-agent group
+    public List<Agent> AgentList; // List of agents to be added to the group
+
+
 
     public override void Initialize()
     {
+        // Initialize the Multi-Agent Group
+        m_AgentGroup = new SimpleMultiAgentGroup();
+        foreach (var agent in AgentList)
+        {
+            m_AgentGroup.RegisterAgent(agent);
+            castleArea.RandomlyPlaceObject(agent.gameObject, 10f, 3);
+        }
+        
         rb = GetComponent<Rigidbody>();
-        agentArea = transform.parent.GetComponent<CastleArea>();
+        castleArea = transform.parent.GetComponent<CastleArea>();
         envMaterial = env.GetComponent<Renderer>().material;
         canPickUp = false;
+        canBuild = true;
         pickedUpObject = null;
         // Add rotation constraints to prevent rotation on the x and z axes
         rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
@@ -60,6 +83,30 @@ public class MaleAgentV2 : Agent
         rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
         // rayPerception = GetComponent<RayPerceptionSensorComponent3D>();
     }
+    
+    public override void OnEpisodeBegin()
+    {
+        
+        // Register all agents in the group at the start of the episode
+        // foreach (var agent in AgentList)
+        // {
+        //     m_AgentGroup.RegisterAgent(agent);
+        //     castleArea.RandomlyPlaceObject(agent.gameObject, 10f, 3);
+        // }
+        
+        // Vector3 spawnLocation = new Vector3(UnityEngine.Random.Range(-15f, 15f), 0, UnityEngine.Random.Range(-7f, 7f));
+        //
+        // bool distanceGood = classObject.CheckOverlap(female.transform.localPosition, spawnLocation, 5f);
+        //
+        // while (!distanceGood)
+        // {
+        //     spawnLocation = new Vector3(UnityEngine.Random.Range(-15f, 15f), 0, UnityEngine.Random.Range(-7f, 7f));
+        //     distanceGood = classObject.CheckOverlap(female.transform.localPosition, spawnLocation, 5f);
+        // }
+        //
+        // transform.localPosition = spawnLocation;
+    }
+
     
 
     // public override void OnEpisodeBegin()
@@ -128,12 +175,13 @@ public class MaleAgentV2 : Agent
         return false;
     }
     
-    public override void CollectObservations(VectorSensor sensor)
+   public override void CollectObservations(VectorSensor sensor)
     {
-        // Add raycast perception observations for stumps and walls
-        float rayDistance = 20f;
-        float[] rayAngles = { 90f };
-        string[] detectableObjects = { "Floor", "Wall", "Female", "Male" };
+        // Define raycast parameters
+        float rayDistance = 10f;
+        float[] rayAngles = { 30f }; // Adjust angles if needed
+        string[] detectableObjects = { "Floor", "Wall", "Female", "Male", "Ground", "Column" }; // Tags the rays can detect
+
         // Define the RayPerceptionInput
         RayPerceptionInput rayInput = new RayPerceptionInput
         {
@@ -142,61 +190,235 @@ public class MaleAgentV2 : Agent
             DetectableTags = detectableObjects,
             StartOffset = 0f,
             EndOffset = 0f,
-            // You may need to set additional fields depending on your version of ML-Agents
-            Transform = this.transform, // Example: setting the transform of the agent
-            CastRadius = 0f, // Example: setting a cast radius if needed
+            Transform = this.transform,
+            CastRadius = 0f, // Adjust if needed
         };
 
-        // Use the RayPerceptionInput struct with Perceive
-        // Call the static Perceive method using the class name
+        // Use RayPerceptionInput with Perceive method
         RayPerceptionOutput rayOutput = RayPerceptionSensor.Perceive(rayInput);
 
-        // Add the observation
-        // sensor.AddObservation(rayOutput);
-        // Add the relevant information from RayPerceptionOutput as observations
+        // Add observations and check for 'Female' tag
         foreach (var rayOutputResult in rayOutput.RayOutputs)
         {
             // Add the distance to the detected object as an observation
             sensor.AddObservation(rayOutputResult.HitFraction);
 
-            // Optionally, add whether a hit was detected (true/false)
+            // Add whether a hit was detected (1 if true, 0 if false)
             sensor.AddObservation(rayOutputResult.HasHit ? 1 : 0);
-    
-            // Optionally, add the tag of the detected object as an integer (if tags are mapped to integers)
+
+            // Add the tag of the detected object as an integer
             sensor.AddObservation(rayOutputResult.HitTagIndex);
-            
+
+            // Check if the detected object has the 'Female' tag and reward the agent
+            if (rayOutputResult.HasHit && rayOutputResult.HitTagIndex == System.Array.IndexOf(detectableObjects, "Female"))
+            {
+                // Reward the agent for detecting a 'Female' object
+                // AddReward(0.1f);
+                m_AgentGroup.AddGroupReward(0.01f);
+                
+                Debug.Log("Detected a 'Female' object and rewarded the agent!");
+                
+                // Penalize the detected 'Female' agent
+                GameObject femaleCollider = rayOutputResult.HitGameObject;
+                CastleAgent femaleAgent = femaleCollider.GetComponent<CastleAgent>();
+                if (femaleAgent != null)
+                {
+                    femaleAgent.m_AgentGroup.AddGroupReward(-0.01f);
+                    Debug.Log("Female agent detected by a male agent and penalized!");
+                }
+            }
         }
 
-        sensor.AddObservation(transform.position);
-        // sensor.AddObservation(targetTransform.position);
-        
-
+        // Add additional observations
+        sensor.AddObservation(transform.position); // Agent's position
+        sensor.AddObservation(CastleArea.numBricks); // Global number of bricks
+        castleArea.UpdateScore(GetCumulativeReward());
+        // Add other relevant observations if needed
     }
     
-    // Mask or unmask the pick-up action based on collision status
+    // This function checks if the agent's next move will collide with any other object, including other agents
+private bool WouldCollide(Vector3 moveVector)
+{
+    // Retrieve the BoxCollider component from the agent
+    BoxCollider boxCollider = GetComponent<BoxCollider>();
+
+    if (boxCollider == null)
+    {
+        Debug.LogError("BoxCollider not found on the agent.");
+        return false; // If no collider is found, assume no collision for safety
+    }
+
+    // Use the bounds of the collider to get the correctly scaled size
+    Vector3 boxSize = boxCollider.bounds.size;  // This gives the correct world size of the collider
+
+    // Calculate the position to check for potential collisions
+    // DrawWireCube(transform.position, boxSize, Color.yellow);
+    Vector3 checkPosition = transform.position + moveVector;
+
+    // Draw the bounding box of the agent at the intended new position using lines
+    // DrawWireCube(checkPosition, boxSize, Color.green);
+
+    // Perform collision detection using OverlapBox to gather colliders
+    Collider[] hitColliders = Physics.OverlapBox(checkPosition, boxSize / 2, Quaternion.identity, ~LayerMask.GetMask("Ground"), QueryTriggerInteraction.Ignore);
+
+    // Check if there are any colliders and log their details
+    // foreach (Collider hitCollider in hitColliders)
+    // {
+    //     // Log the layer name and tag of the object with which it would collide
+    //     Debug.Log($"Potential Collision with: {hitCollider.gameObject.name}, Layer: {LayerMask.LayerToName(hitCollider.gameObject.layer)}, Tag: {hitCollider.gameObject.tag}");
+    //
+    //     // Draw the collider of the potential colliding object if it has a BoxCollider
+    //     BoxCollider otherBoxCollider = hitCollider as BoxCollider;
+    //     if (otherBoxCollider != null)
+    //     {
+    //         // Use the bounds to get the correctly scaled size of the other collider
+    //         Vector3 otherBoxSize = otherBoxCollider.bounds.size;
+    //         Vector3 otherBoxPosition = otherBoxCollider.bounds.center; // Use bounds.center for accurate position
+    //
+    //         // Draw the bounding box of the object that would be collided with
+    //         DrawWireCube(otherBoxPosition, otherBoxSize, Color.red);
+    //     }
+    //     else
+    //     {
+    //         // Draw bounds using DrawLine as a fallback for non-box colliders
+    //         Debug.DrawLine(hitCollider.bounds.min, hitCollider.bounds.max, Color.red);
+    //     }
+    // }
+
+    // Return true if there is any collider detected, indicating a potential collision
+    return hitColliders.Length > 0;
+}
+
+// Helper method to draw a wireframe cube using Debug.DrawLine
+private void DrawWireCube(Vector3 position, Vector3 size, Color color)
+{
+    Vector3 halfSize = size / 2;
+
+    // Calculate all 8 corners of the cube
+    Vector3[] corners = new Vector3[8];
+    corners[0] = position + new Vector3(-halfSize.x, -halfSize.y, -halfSize.z);
+    corners[1] = position + new Vector3(halfSize.x, -halfSize.y, -halfSize.z);
+    corners[2] = position + new Vector3(halfSize.x, -halfSize.y, halfSize.z);
+    corners[3] = position + new Vector3(-halfSize.x, -halfSize.y, halfSize.z);
+    corners[4] = position + new Vector3(-halfSize.x, halfSize.y, -halfSize.z);
+    corners[5] = position + new Vector3(halfSize.x, halfSize.y, -halfSize.z);
+    corners[6] = position + new Vector3(halfSize.x, halfSize.y, halfSize.z);
+    corners[7] = position + new Vector3(-halfSize.x, halfSize.y, halfSize.z);
+
+    // Draw bottom square
+    Debug.DrawLine(corners[0], corners[1], color);
+    Debug.DrawLine(corners[1], corners[2], color);
+    Debug.DrawLine(corners[2], corners[3], color);
+    Debug.DrawLine(corners[3], corners[0], color);
+
+    // Draw top square
+    Debug.DrawLine(corners[4], corners[5], color);
+    Debug.DrawLine(corners[5], corners[6], color);
+    Debug.DrawLine(corners[6], corners[7], color);
+    Debug.DrawLine(corners[7], corners[4], color);
+
+    // Draw vertical lines
+    Debug.DrawLine(corners[0], corners[4], color);
+    Debug.DrawLine(corners[1], corners[5], color);
+    Debug.DrawLine(corners[2], corners[6], color);
+    Debug.DrawLine(corners[3], corners[7], color);
+}
+
+
+
+    
     // Mask or unmask the pick-up action based on collision status
     public override void WriteDiscreteActionMask(IDiscreteActionMask actionMask)
     {
+        // Mask movement actions that would result in a collision
+        for (int moveDirection = 1; moveDirection <= 2; moveDirection++) // Assuming 1: Forward, 2: Backward
+        {
+            Vector3 moveVector = Vector3.zero;
+
+            switch (moveDirection)
+            {
+                case 1:
+                    // Move forward
+                    moveVector = transform.forward * moveSpeed;
+                    break;
+                case 2:
+                    // Move backward
+                    moveVector = -transform.forward * moveSpeed;
+                    break;
+            }
+
+            // Mask the action if the movement would result in a collision
+            if (WouldCollide(moveVector))
+            {
+                Debug.Log($"COLLIDES");
+                actionMask.SetActionEnabled(0, moveDirection, false); // Assuming move actions are indexed at branch 0
+            }
+            else
+            {
+                Debug.Log($"DOES NOT COLLIDE");
+                actionMask.SetActionEnabled(0, moveDirection, true);
+            }
+        }
+        
         if (!canPickUp || pickedUpObject != null)
         {
             // Mask the pick-up action if the agent can't pick up or already holds something
-            actionMask.SetActionEnabled(0, 0, false);
+            actionMask.SetActionEnabled(2, 0, false);
         }
         else
         {
             // Unmask the pick-up action if the agent can pick up
-            actionMask.SetActionEnabled(0, 0, true);
+            actionMask.SetActionEnabled(2, 0, true);
         }
-
-        if (pickedUpObject == null)
+        
+        if (pickedUpObject != null)
         {
-            // Mask the drop action if the agent is not holding anything
-            actionMask.SetActionEnabled(0, 1, false);
+            Collider objectCollider = pickedUpObject.GetComponent<Collider>();
+            if (objectCollider != null)
+            {
+                Vector3 halfExtents = objectCollider.bounds.extents;
+                Vector3 dropPosition = transform.position + transform.forward * (halfExtents.z + 0.5f);
+                // There is enough space to place the gameobject and not collide with something else pickable
+                if (Physics.CheckBox(dropPosition, halfExtents, Quaternion.identity, LayerMask.GetMask("Pickable")))
+                {
+                    // Mask the drop action (assuming the drop action index is 1)
+                    actionMask.SetActionEnabled(2, 1, false);
+                }
+                else
+                {
+                    actionMask.SetActionEnabled(2, 1, true);
+                }
+            }
         }
         else
         {
-            // Unmask the drop action if the agent is holding something
-            actionMask.SetActionEnabled(0, 1, true);
+            actionMask.SetActionEnabled(2, 1, false);
+        }
+        
+        
+        // Try to subtract the necessary Bricks
+        if (CastleArea.CheckSubtractBricks(brickCostPerObject) && CastleArea.BricksTimeFunction())
+        {
+            canBuild = true;
+            actionMask.SetActionEnabled(2, 3, true);
+            // Debug.Log("CAN BUILD==================");
+        }
+        else
+        {
+            canBuild = false;
+            actionMask.SetActionEnabled(2, 3, false);
+        }
+        
+        // destroy pickable object
+        if (objectToDestroy == null)
+        {
+            // Mask the destroy action (assuming the destroy action index is 4)
+            actionMask.SetActionEnabled(2, 4, false);
+        }
+        else
+        {
+            // Unmask the destroy action if there is an object to destroy
+            actionMask.SetActionEnabled(2, 4, true);
         }
     }
     
@@ -205,9 +427,16 @@ public class MaleAgentV2 : Agent
     private void OnCollisionEnter(Collision collision)
     {
         // Check if the collided object is in the "Pickable" layer
+        Debug.Log($"COLLI: {collision}");
         if (collision.gameObject.layer == LayerMask.NameToLayer("Pickable"))
         {
             canPickUp = true;
+            objectToDestroy = collision.gameObject;
+            Rigidbody rbObj = collision.gameObject.GetComponent<Rigidbody>();
+            if (rbObj != null)
+            {
+                rbObj.isKinematic = true;  // Make the object stationary
+            }
         }
     }
 
@@ -219,9 +448,17 @@ public class MaleAgentV2 : Agent
             canPickUp = false;
             pickedUpObject = null;
         }
+        if (collision.gameObject.layer == LayerMask.NameToLayer("Pickable"))
+        {
+            if (collision.gameObject == objectToDestroy)
+            {
+                objectToDestroy = null;
+            }
+        }
     }
 
 // Function to pick up the object
+    // Function to pick up the object
 private void PickUpObject()
 {
     if (pickedUpObject == null && canPickUp)
@@ -232,7 +469,11 @@ private void PickUpObject()
         {
             pickedUpObject = colliders[0].gameObject;
 
-            // Disable the object's physics temporarily
+            // Save the object's original rotation
+            // Set the original rotation to (0, 0, 0)
+            originalRotation = Quaternion.identity;
+
+            // Disable the object's physics and collider to prevent distortion and interference with Raycasts
             Rigidbody rbPickable = pickedUpObject.GetComponent<Rigidbody>();
             if (rbPickable != null)
             {
@@ -240,18 +481,19 @@ private void PickUpObject()
                 rbPickable.useGravity = false;
             }
 
-            // Attach the object to the agent but ensure no interference with the agent's collider
+            Collider objectCollider = pickedUpObject.GetComponent<Collider>();
+            if (objectCollider != null)
+            {
+                objectCollider.enabled = false; // Disable the collider
+            }
+
+            // Attach the object to the agent, ensuring no interference with the agent's collider
             pickedUpObject.transform.SetParent(this.transform);
             pickedUpObject.transform.localPosition = new Vector3(0, 1, 1); // Adjust as needed
-            pickedUpObject.transform.localRotation = Quaternion.identity;
+            pickedUpObject.transform.localRotation = Quaternion.identity; // Keeps the object aligned with the agent
 
-            // Ensure the object's collider doesn't interfere with the agent's collider
-            Collider objectCollider = pickedUpObject.GetComponent<Collider>();
-            Collider agentCollider = GetComponent<Collider>();
-            if (objectCollider != null && agentCollider != null)
-            {
-                Physics.IgnoreCollision(agentCollider, objectCollider, false); // Enable collision detection
-            }
+            // Set the object's scale to default (1,1,1) to prevent any distortion
+            pickedUpObject.transform.localScale = Vector3.one;
 
             canPickUp = false; // The agent can no longer pick up until it drops the current object
         }
@@ -263,82 +505,259 @@ private void DropObject()
 {
     if (pickedUpObject != null)
     {
-        // Detach the object from the agent
-        pickedUpObject.transform.SetParent(null);
-
-        // Re-enable the object's physics
-        Rigidbody rbPickable = pickedUpObject.GetComponent<Rigidbody>();
-        if (rbPickable != null)
-        {
-            rbPickable.isKinematic = false;
-            rbPickable.useGravity = true;
-        }
-
-        // Ensure the object's collider can now collide with the agent again
         Collider objectCollider = pickedUpObject.GetComponent<Collider>();
-        Collider agentCollider = GetComponent<Collider>();
-        if (objectCollider != null && agentCollider != null)
+        if (objectCollider != null)
         {
-            Physics.IgnoreCollision(agentCollider, objectCollider, false); // Re-enable collision detection between agent and object
-        }
+            Vector3 halfExtents = objectCollider.bounds.extents;
+            Vector3 dropPosition = transform.position + transform.forward * (halfExtents.z + 0.5f);
 
-        // Clear the reference to the picked-up object
-        pickedUpObject = null;
+            if (!Physics.CheckBox(dropPosition, halfExtents, Quaternion.identity, LayerMask.GetMask("Pickable")))
+            {
+                pickedUpObject.transform.SetParent(null);
+                pickedUpObject.transform.position = dropPosition;
+                pickedUpObject.transform.rotation = Quaternion.identity;
+
+                Rigidbody rbPickable = pickedUpObject.GetComponent<Rigidbody>();
+                if (rbPickable != null)
+                {
+                    rbPickable.isKinematic = false;
+                    rbPickable.useGravity = true;
+                }
+
+                objectCollider.enabled = true;
+
+                pickedUpObject.transform.localScale = Vector3.one;
+                pickedUpObject = null;
+                canPickUp = true;
+            }
+            else
+            {
+                Debug.Log("Not enough space to drop the object safely!");
+            }
+        }
     }
 }
 
 
-    public override void OnActionReceived(ActionBuffers actions)
+// Function to create a new prop in the environment
+    public GameObject CreateProp(string propName, Vector3 position, Quaternion rotation)
     {
-        float moveRotate = actions.ContinuousActions[0];
-        float moveForward = actions.ContinuousActions[1];
-        // Move the agent forward/backward
-        if (rb != null)
-        {
-            Vector3 moveDirection = transform.forward * moveForward * moveSpeed * Time.deltaTime;
-            rb.MovePosition(transform.position + moveDirection);
-        }
-
-        // Rotate the agent
-        if (rb != null)
-        {
-            float rotationAngle = moveRotate * moveSpeed * Time.deltaTime; // Ensure rotation is frame-rate independent
-            rb.MoveRotation(rb.rotation * Quaternion.Euler(0f, rotationAngle * moveSpeed, 0f)); // Usi
-        }
-        // Vector3 velocity = new Vector3(moveX, 0, moveZ);
-        // velocity = velocity.normalized  * Time.deltaTime * moveSpeed;
-        // transform.position += velocity;
         
-        // Get the discrete actions for pick up and drop
-        int discreteAction = actions.DiscreteActions[0];
-        bool pickUpAction;
-        bool dropAction;
-        bool noBuildAction;
-        if (discreteAction == 0)
+        Debug.Log($"CAN BUILD: {canBuild}");
+        // Check if the propName is valid
+        if (System.Array.IndexOf(propNames, propName) < 0)
         {
-            pickUpAction = true;
-        } else { pickUpAction = false;}
-        if (discreteAction == 1)
-        {
-            dropAction = true;
-        } else { dropAction = false;}
-        if (discreteAction == 2)
-        {
-            noBuildAction = true;
-        } else { noBuildAction = false;}
+            Debug.LogError("Invalid prop name.");
+            return null;
+        }
+        
+        // Load the prefab from the Resources folder
+        GameObject propPrefab = Resources.Load<GameObject>($"Prefabs/{propName}");
 
-        // If the pick-up action is selected and the agent can pick up, execute the pick-up
-        if (pickUpAction == true && canPickUp)
+        if (propPrefab != null)
         {
-            PickUpObject();
+            // Instantiate the prefab in the scene at the origin
+            Instantiate(propPrefab, Vector3.zero, Quaternion.identity);
+        }
+        else
+        {
+            Debug.LogError($"Could not find the prop '{propName}' in the Props folder.");
         }
 
-        // If the drop action is selected and the agent is holding something, drop it
-        if (dropAction == true && pickedUpObject != null)
-        {
-            DropObject();
-        }
+        // Load the prefab from the Props folder
+        // GameObject propPrefab = Resources.Load<GameObject>($"Prefabs/{propName}");
+        // if (propPrefab == null)
+        // {
+        //     Debug.LogError($"Could not find the prop '{propName}' in the Props folder.");
+        //     return null;
+        // }
 
+        // Create the prop in the environment
+        GameObject newProp = Instantiate(propPrefab, position, rotation);
+
+        // Set the layer of the new prop to 'Pickable'
+        newProp.layer = LayerMask.NameToLayer("Pickable");
+        // Return the newly created GameObject
+        return newProp;
+    }
+    
+    // Example usage of CreateProp function
+    public void CreateColumnProp()
+    {
+        // Define the distance in front of the agent where the object will be placed
+        float distanceInFront = 2.0f; // Adjust this value as needed
+
+        // Calculate the position in front of the agent
+        Vector3 position = transform.position + transform.forward * distanceInFront;
+
+        // Keep the rotation the same as the agent's rotation
+        Quaternion rotation = transform.rotation;
+
+        // Create a 'floor' prop at the calculated position and rotation
+        CreateProp("column_mini", position, rotation);
+        CastleArea.SubtractBricks(brickCostPerObject);
+        Debug.Log($"Take: {CastleArea.numBricks}");
+
+        // AddReward(0.001f);
+        // if the team scores a goal
+        m_AgentGroup.AddGroupReward(0.001f);
+    }
+    
+    // Function to destroy the object
+    private void DestroyObject()
+    {
+        if (objectToDestroy != null)
+        {
+            // Add the brick cost to the Bricks variable
+            CastleArea.AddBricks(brickCostPerObject);
+            Debug.Log($"Add: {CastleArea.numBricks}");
+            // Destroy the game object
+            Destroy(objectToDestroy);
+
+            // Clear the reference
+            objectToDestroy = null;
+        }
+    }
+
+
+        public override void OnActionReceived(ActionBuffers actions)
+        {
+            // float moveRotate = actions.ContinuousActions[0];
+            // Debug.Log($"ROT PRED: {moveRotate}");
+            // float moveForward = actions.ContinuousActions[1];
+            // // Move the agent forward/backward
+            // if (rb != null)
+            // {
+            //     Vector3 moveDirection = transform.forward * moveForward * moveSpeed * Time.deltaTime;
+            //     rb.MovePosition(transform.position + moveDirection);
+            //     Debug.Log($"MOVE: {moveDirection}");
+            // }
+            //
+            // // Rotate the agent
+            // if (rb != null)
+            // {
+            //     float rotationAngle = moveRotate * rotateSpeed * Time.deltaTime; // Ensure rotation is frame-rate independent
+            //     rb.MoveRotation(rb.rotation * Quaternion.Euler(0f, rotationAngle, 0f)); // Usi
+            // }
+            
+            int moveDirection = actions.DiscreteActions[0];  // Discrete action for movement
+            int rotationDirection = actions.DiscreteActions[1];  // Discrete action for rotation
+
+            // Define movement and rotation step sizes
+            float moveStep = moveSpeed * Time.deltaTime;
+            float rotationStep = rotateSpeed * Time.deltaTime;  // Assuming you have a rotationSpeed variable
+            // Handle movement based on discrete actions
+            if (rb != null)
+            {
+                Vector3 moveVector = Vector3.zero;
+
+                switch (moveDirection)
+                {
+                    case 0:
+                        // No movement
+                        Debug.Log($"STOP: { moveStep}");
+                        break;
+                    case 1:
+                        // Move forward
+                        moveVector = transform.forward * moveStep;
+                        Debug.Log($"FORWARD: { moveVector}");
+                        break;
+                    case 2:
+                        // Move backward
+                        moveVector = -transform.forward * moveStep;
+                        Debug.Log($"BACK: { moveVector}");
+                        break;
+                    default:
+                        // No movement by default
+                        break;
+                }
+                Debug.Log($"MOVE: { moveVector}");
+
+                // Apply movement
+                rb.MovePosition(transform.position + moveVector);
+            }
+
+            // Handle rotation based on discrete actions
+            if (rb != null)
+            {
+                float rotationAngle = 0f;
+
+                switch (rotationDirection)
+                {
+                    case 0:
+                        // No rotation
+                        break;
+                    case 1:
+                        // Rotate left
+                        rotationAngle = -rotationStep;
+                        break;
+                    case 2:
+                        // Rotate right
+                        rotationAngle = rotationStep;
+                        break;
+                    default:
+                        // No rotation by default
+                        break;
+                }
+
+                // Apply rotation
+                Quaternion deltaRotation = Quaternion.Euler(0f, rotationAngle * rotationStep , 0f);
+                Quaternion newRotation = rb.rotation * deltaRotation; // Apply the change in rotation relative to self
+
+                // Fix x and z axis rotations to 0, keeping only the y-axis rotation
+                newRotation = Quaternion.Euler(0f, newRotation.eulerAngles.y, 0f);
+
+                // Apply the constrained rotation to the Rigidbody
+                rb.MoveRotation(newRotation);
+                Debug.Log($"ROTATION: {newRotation}");
+
+                // transform.Rotate(0f, rotationAngle, 0f, Space.Self);
+            }
+            
+            // Get the discrete actions for pick up and drop
+            int discreteAction = actions.DiscreteActions[2];
+            bool pickUpAction;
+            bool dropAction;
+            bool noBuildAction;
+            if (discreteAction == 0)
+            {   
+                Debug.Log("ACTION: PICKUP");
+                pickUpAction = true;
+            } else { pickUpAction = false;}
+            if (discreteAction == 1)
+            {
+                Debug.Log("ACTION: DROP");
+                dropAction = true;
+            } else { dropAction = false;}
+            if (discreteAction == 2)
+            {
+                Debug.Log("ACTION: NOTHING");
+                noBuildAction = true;
+            } else { noBuildAction = false;}
+            if (discreteAction == 3)
+            {
+                Debug.Log("ACTION: CREATE");
+                // Debug.Log("SELECTED BUILD ACTION.");
+                CreateColumnProp();
+            }
+
+            // If the pick-up action is selected and the agent can pick up, execute the pick-up
+            if (pickUpAction == true && canPickUp)
+            {
+                PickUpObject();
+            }
+
+            // If the drop action is selected and the agent is holding something, drop it
+            if (dropAction == true && pickedUpObject != null)
+            {
+                DropObject();
+            }
+            
+            if (discreteAction == 4)
+            {
+                DestroyObject();
+            }
+            castleArea.UpdateScore(GetCumulativeReward());
     }
     
     public override void Heuristic(in ActionBuffers actionsOut)
@@ -372,13 +791,13 @@ private void DropObject()
         if (GetCumulativeReward() <= -500f)
         {
             // Reward is too negative, give up
-            EndEpisode();
+            m_AgentGroup.EndGroupEpisode();
 
             // Indicate failure with the ground material
-            StartCoroutine(agentArea.SwapGroundMaterial(success: false));
+            StartCoroutine(castleArea.SwapGroundMaterial(success: false));
 
             // Reset
-            agentArea.ResetArea();
+            castleArea.ResetArea();
         }
         // else if (buildCount >= agentArea.GetBricksObjects().Count)
         // {
@@ -398,31 +817,51 @@ private void DropObject()
         //     agentArea.UpdateScore(GetCumulativeReward());
         // }
         
-        if (other.gameObject.tag =="Female")
-        {
-            
-            AddReward(30f);
-            classObject.AddReward(-30f);
-            Debug.Log("Caught Female");
-            envMaterial.color = Color.yellow;
-            agentArea.UpdateScore(GetCumulativeReward());
-            // end the caught agent's episode
-            classObject.EndEpisode();
-            // then end hunter episode
-            EndEpisode();
-            
-        }
+        // if (other.gameObject.tag =="Female")
+        // {
+        //     
+        //     // AddReward(0.1f);
+        //     // classObject = other.gameObject;
+        //     // classObject.AddReward(-0.1f);
+        //     // Debug.Log("Caught Female");
+        //     // envMaterial.color = Color.yellow;
+        //     // agentArea.UpdateScore(GetCumulativeReward());
+        //     // // end the caught agent's episode
+        //     // classObject.EndEpisode();
+        //     // // then end hunter episode
+        //     // EndEpisode();
+        //     
+        //     CastleAgent castleAgent = other.gameObject.GetComponent<CastleAgent>();
+        //     if (castleAgent != null)
+        //     {
+        //         // CastleAgent receives negative reward and ends episode
+        //         // castleAgent.AddReward(-0.1f);
+        //         castleAgent.m_AgentGroup.AddGroupReward(-0.1f);
+        //         castleAgent.m_AgentGroup.EndGroupEpisode();
+        //         Debug.Log("Caught Female");
+        //         envMaterial.color = Color.yellow;
+        //         castleArea.UpdateScore(GetCumulativeReward());
+        //         // MaleAgent receives positive reward
+        //         // AddReward(0.1f);
+        //         m_AgentGroup.EndGroupEpisode();
+        //         castleArea.ResetArea();
+        //         // EndEpisode();
+        //     }
+        //     
+        // }
         
         if (other.gameObject.tag =="Wall")
         {
-            Debug.Log("hit wall");
+            // Debug.Log("hit wall");
             envMaterial.color = Color.red;
-            AddReward(-10f);
-            agentArea.UpdateScore(GetCumulativeReward());
+            // AddReward(-0.5f);
+            m_AgentGroup.AddGroupReward(-0.5f);
+            castleArea.UpdateScore(GetCumulativeReward());
             Debug.Log("hit wall");
-            // agentArea.ResetAgent(this);
-            EndEpisode();
-            
+            // agentArea.ResetAgent(this.gameObject);
+            m_AgentGroup.EndGroupEpisode();
+            castleArea.ResetArea();
+
         }
         
     }

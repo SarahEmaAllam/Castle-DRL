@@ -19,10 +19,11 @@ public class CastleArea : MonoBehaviour
     public GameObject agentPrefab;
     public GameObject wallPrefab;
 
+    // [HideInInspector]
+    public static float numBricks = 0f;
+    public static float maxBricks = 0f;
     [HideInInspector]
-    public int numBricks;
-    [HideInInspector]
-    public int numAgents;
+    public static int numAgents;
     [HideInInspector]
     public float spawnRange;
     
@@ -91,6 +92,42 @@ public class CastleArea : MonoBehaviour
         yield return new WaitForSeconds(0.5f);
         groundRenderer.material = groundMaterial;
     }
+
+    public static bool BricksTimeFunction()
+    {
+        if ( maxBricks < 10000f)
+        {
+            numBricks += 0.001f;
+            maxBricks += 0.001f;
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    public static void AddBricks(float amount)
+    {
+        numBricks += amount;
+    }
+    
+    public static bool CheckSubtractBricks(float amount)
+    {
+        if (numBricks >= amount)
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+    
+    public static void SubtractBricks(float amount)
+    {
+            numBricks -= amount;
+    }
     
     public void UpdateScore(float score)
     {
@@ -142,7 +179,7 @@ public class CastleArea : MonoBehaviour
             foreach (GameObject spawnedAgent in spawnedAgents.ToArray())
             {
                 // Destroy(spawnedAgent);
-                RandomlyPlaceObject(spawnedAgent, spawnRange, 50);
+                RandomlyPlaceObject(spawnedAgent, spawnRange, 3);
             }
         }
     
@@ -163,7 +200,7 @@ public class CastleArea : MonoBehaviour
     /// <param name="objectToPlace">The object to be randomly placed</param>
     /// <param name="range">The range in x and z to choose random points within.</param>
     /// <param name="maxAttempts">Number of times to attempt placement</param>
-    private void RandomlyPlaceObject(GameObject objectToPlace, float range, float maxAttempts)
+    public void RandomlyPlaceObject(GameObject objectToPlace, float range, float maxAttempts)
     {
         // Temporarily disable collision
         objectToPlace.GetComponent<Collider>().enabled = false;
