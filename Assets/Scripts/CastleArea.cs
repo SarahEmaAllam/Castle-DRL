@@ -14,7 +14,9 @@ public class CastleArea : MonoBehaviour
     public Material successMaterial;
     public Material failureMaterial;
     public TextMeshPro scoreText;
-
+    private int m_ResetTimer;
+    public int MaxEnvironmentSteps = 10000;
+    
     [Header("Prefabs")]
     public GameObject agentPrefab;
     public GameObject wallPrefab;
@@ -28,22 +30,79 @@ public class CastleArea : MonoBehaviour
     public float spawnRange;
     
     private List<GameObject> spawnedWalls;
-    private List<GameObject> spawnedAgents;
+    
+    [Serializable]
+    public class FemaleInfo
+    {
+        public CastleAgent Agent;
+        [HideInInspector]
+        public Vector3 startingPos;
+        [HideInInspector]
+        public Quaternion startingRot;
+        [HideInInspector]
+        public Rigidbody rb;
+        [HideInInspector]
+        public Collider boxCollider;
+        [HideInInspector]
+        public int TeamID;
+    }
+    
+    [Serializable]
+    public class MaleInfo
+    {
+        public MaleAgentV2 Agent;
+        [HideInInspector]
+        public Vector3 startingPos;
+        [HideInInspector]
+        public Quaternion startingRot;
+        [HideInInspector]
+        public Rigidbody rb;
+        [HideInInspector]
+        public Collider boxCollider;
+        [HideInInspector]
+        public int TeamID;
+    }
+    
+    private SimpleMultiAgentGroup m_Team0AgentGroup;
+    private SimpleMultiAgentGroup m_Team1AgentGroup;
+    public List<FemaleInfo> Team0Players;
+    public List<MaleInfo> Team1Players;
 
     // A list of (position, radius) tuples of occupied spots in the area
     private List<Tuple<Vector3, float>> occupiedPositions;
 
     private Renderer groundRenderer;
     private Material groundMaterial;
+    private bool m_Initialized;
     
     
-    private void Start()
+    private void Initialize()
     {
         // Get the ground renderer so we can change the material when a goal is scored
         groundRenderer = ground.GetComponent<Renderer>();
 
         // Store the starting material
         groundMaterial = groundRenderer.material;
+        
+        m_Team0AgentGroup = new SimpleMultiAgentGroup();
+        m_Team1AgentGroup = new SimpleMultiAgentGroup();
+        //INITIALIZE AGENTS
+        foreach (var item in Team0Players)
+        {
+            item.Agent.Initialize();
+            item.Agent.teamID = 0;
+            item.TeamID = 0;
+            m_Team0AgentGroup.RegisterAgent(item.Agent);
+        }
+        foreach (var item in Team1Players)
+        {
+            item.Agent.Initialize();
+            item.Agent.teamID = 1;
+            item.TeamID = 1;
+            m_Team1AgentGroup.RegisterAgent(item.Agent);
+        }
+        m_Initialized = true;
+        ResetArea();
     }
 
     /// <summary>
@@ -52,23 +111,57 @@ public class CastleArea : MonoBehaviour
     /// <param name="agents"></param>
     public void ResetArea()
     {
+        
         occupiedPositions = new List<Tuple<Vector3, float>>();
         ResetAgents();
-        ResetWalls();
+        ResetResources();
+
+        // ResetWalls();
     }
 
-    private void FixedUpdate()
+    public void ResetResources()
     {
-        // Make sure the pig has not left the area
-        // Vector3 agentLocalPosition = CastleAgent.transform.localPosition;
-        // if (Mathf.Abs(agentLocalPosition.x) > 13f || Mathf.Abs(agentLocalPosition.z) > 13f)
-        // {
-        //     Debug.LogWarning("Agent out of the pen!");
-        //     CastleAgent castleAgentComponent = CastleAgent.GetComponent<CastleAgent>();
-        //     castleAgentComponent.SetReward(-5f);
-        //     ResetArea();
-        // }
+        numBricks = 0;
+        maxBricks = 0;
+        m_ResetTimer = 0;
+        // remove all agent-built prefabs as well
+
     }
+    
+    void FixedUpdate()
+    {
+        if (!m_Initialized) return;
+        //RESET SCENE IF WE MaxEnvironmentSteps
+        m_ResetTimer += 1;
+        if (m_ResetTimer >= MaxEnvironmentSteps)
+        {
+            m_Team0AgentGroup.GroupEpisodeInterrupted();
+            m_Team1AgentGroup.GroupEpisodeInterrupted();
+            ResetArea();
+        }
+    }
+    
+    // Update is called once per frame
+    void Update()
+    {
+        if (!m_Initialized)
+        {
+            Initialize();
+        }
+    }
+
+    // private void FixedUpdate()
+    // {
+    //     // Make sure the pig has not left the area
+    //     // Vector3 agentLocalPosition = CastleAgent.transform.localPosition;
+    //     // if (Mathf.Abs(agentLocalPosition.x) > 13f || Mathf.Abs(agentLocalPosition.z) > 13f)
+    //     // {
+    //     //     Debug.LogWarning("Agent out of the pen!");
+    //     //     CastleAgent castleAgentComponent = CastleAgent.GetComponent<CastleAgent>();
+    //     //     castleAgentComponent.SetReward(-5f);
+    //     //     ResetArea();
+    //     // }
+    // }
     
     public List<GameObject> GetBricksObjects()
     {
@@ -173,15 +266,20 @@ public class CastleArea : MonoBehaviour
     /// </summary>
     private void ResetAgents()
     {
-        if (spawnedAgents != null)
+        foreach (var item in Team0Players)
         {
-            // Destroy any stumps remaining from the previous run
-            foreach (GameObject spawnedAgent in spawnedAgents.ToArray())
-            {
-                // Destroy(spawnedAgent);
-                RandomlyPlaceObject(spawnedAgent, spawnRange, 3);
-            }
+            item.Agent.gameObject.SetActive(true);
+            ResetAgent(item.Agent.gameObject);
+            m_Team0AgentGroup.RegisterAgent(item.Agent);
         }
+        foreach (var item in Team1Players)
+        {
+            item.Agent.gameObject.SetActive(true);
+            ResetAgent(item.Agent.gameObject);
+            m_Team1AgentGroup.RegisterAgent(item.Agent);
+        }
+
+    }
     
         // spawnedAgents = new List<GameObject>();
         //
@@ -192,7 +290,7 @@ public class CastleArea : MonoBehaviour
         //     RandomlyPlaceObject(agentInstance, spawnRange, 50);
         //     spawnedAgents.Add(agentInstance);
         // }
-    }
+    // }
     
         /// <summary>
     /// Attempts to randomly place an object by checking a sphere around a potential location for collisions

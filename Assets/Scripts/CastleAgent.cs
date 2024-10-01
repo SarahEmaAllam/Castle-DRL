@@ -9,6 +9,7 @@ using Unity.MLAgents.Actuators;
 public class CastleAgent : Agent
 {
     // target variabvles
+    private RayPerceptionSensorComponent3D rayPerceptionSensor;
     [SerializeField] private Transform targetTransform;
     [SerializeField] private List<GameObject> spawnedTargetList = new List<GameObject>();
     public int targetCount;
@@ -16,9 +17,13 @@ public class CastleAgent : Agent
     private float RAY_RANGE = 5f;
     
     // agent variables
-    [SerializeField] private float moveSpeed;
+    [Header("TEAM")]
+
+    public int teamID = 0;
+    [SerializeField] private float moveSpeed = 1.0f;
     private float rotateSpeed = 100f;
     private Rigidbody rb;
+    BoxCollider boxCollider;
     
     // env variables
     [SerializeField] private Transform envLocation;
@@ -40,7 +45,8 @@ public class CastleAgent : Agent
     // // env variables
     private CastleArea castleArea;
     // Class-level variable to store the original rotation of the picked-up object
-    private Quaternion originalRotation;
+    private Quaternion startingRot;
+    private Vector3 startingPos;
     
     // multi agents setup
     public SimpleMultiAgentGroup m_AgentGroup; // Multi-agent group
@@ -52,9 +58,16 @@ public class CastleAgent : Agent
     public override void Initialize()
     {
         // Initialize the Multi-Agent Group
-        m_AgentGroup = new SimpleMultiAgentGroup();
+       
+        rayPerceptionSensor = GetComponent<RayPerceptionSensorComponent3D>();
+
+        if (rayPerceptionSensor == null)
+        {
+            Debug.LogError("RayPerceptionSensorComponent3D not found!");
+        }
         
         rb = GetComponent<Rigidbody>();
+        boxCollider = GetComponent<BoxCollider>();
         castleArea = transform.parent.GetComponent<CastleArea>();
         envMaterial = env.GetComponent<Renderer>().material;
         canPickUp = false;
@@ -71,21 +84,21 @@ public class CastleAgent : Agent
     }
     
 
-    public override void OnEpisodeBegin()
-    {
-        // Register all agents in the group at the start of the episode
-        foreach (var agent in AgentList)
-        {
-            m_AgentGroup.RegisterAgent(agent);
-            castleArea.ResetArea();
-            CreateFoodProp();
-        }
-        
-        // transform.localPosition = new Vector3(UnityEngine.Random.Range(-7f, 7f), 0, UnityEngine.Random.Range(-7f, 7f));
-        
-        // CreateTarget();
-        
-    }
+    // public override void OnEpisodeBegin()
+    // {
+    //     // Register all agents in the group at the start of the episode
+    //     foreach (var agent in AgentList)
+    //     {
+    //         m_AgentGroup.RegisterAgent(agent);
+    //         castleArea.ResetArea();
+    //         CreateFoodProp();
+    //     }
+    //     
+    //     // transform.localPosition = new Vector3(UnityEngine.Random.Range(-7f, 7f), 0, UnityEngine.Random.Range(-7f, 7f));
+    //     
+    //     // CreateTarget();
+    //     
+    // }
     
 
     private void CreateTarget()
@@ -174,55 +187,57 @@ public class CastleAgent : Agent
     }
 
        
-public override void CollectObservations(VectorSensor sensor)
+    public override void CollectObservations(VectorSensor sensor)
     {
-        // Define raycast parameters
-        float rayDistance = 10f;
-        float[] rayAngles = { 30f }; // Adjust angles if needed
-        string[] detectableObjects = { "Floor", "Wall", "Female", "Male", "Ground", "Column" }; // Tags the rays can detect
 
-        // Define the RayPerceptionInput
-        RayPerceptionInput rayInput = new RayPerceptionInput
-        {
-            RayLength = rayDistance,
-            Angles = rayAngles,
-            DetectableTags = detectableObjects,
-            StartOffset = 0f,
-            EndOffset = 0f,
-            Transform = this.transform,
-            CastRadius = 0f, // Adjust if needed
-        };
 
-        // Use RayPerceptionInput with Perceive method
-        RayPerceptionOutput rayOutput = RayPerceptionSensor.Perceive(rayInput);
-
+        var rayOutputs = RayPerceptionSensor.Perceive(rayPerceptionSensor.GetRayPerceptionInput()).RayOutputs;
+        int lengthOfRayOutputs = rayOutputs.Length;
+        
         // Add observations and check for 'Female' tag
-        foreach (var rayOutputResult in rayOutput.RayOutputs)
+        for (int i = 0; i < lengthOfRayOutputs; i++)
         {
-            // Add the distance to the detected object as an observation
-            sensor.AddObservation(rayOutputResult.HitFraction);
-
+            var rayOutputResult = rayOutputs[i];
             // Add whether a hit was detected (1 if true, 0 if false)
-            sensor.AddObservation(rayOutputResult.HasHit ? 1 : 0);
-
-            // Add the tag of the detected object as an integer
-            sensor.AddObservation(rayOutputResult.HitTagIndex);
-
-            // Check if the detected object has the 'Female' tag and reward the agent
-            if (rayOutputResult.HasHit && rayOutputResult.HitTagIndex == System.Array.IndexOf(detectableObjects, "Female"))
+            if (rayOutputResult.HasHit)
+            {
+                sensor.AddObservation(1);
+                // Add the distance to the detected object as an observation
+                sensor.AddObservation(rayOutputResult.HitFraction);
+                // Add the tag of the detected object as an integer
+                sensor.AddObservation(rayOutputResult.HitTagIndex);
+            }
+            else
+            {
+                sensor.AddObservation(0);
+                // Add the distance to the detected object as an observation
+                sensor.AddObservation(100);
+                // Add the tag of the detected object as an integer
+                sensor.AddObservation(100);
+            }
+            
+            if (rayOutputResult.HasHit && rayOutputResult.HitGameObject.CompareTag("Female"))
             {
                 // Reward the agent for detecting a 'Female' object
-                // AddReward(0.1f);
-                m_AgentGroup.AddGroupReward(0.01f);
+                AddReward(0.1f);
+                castleArea.UpdateScore(GetCumulativeReward());
+                // m_AgentGroup.AddGroupReward(0.01f);
                 Debug.Log("Detected a 'FEMALE' object and rewarded the agent!");
             }
             
-            if (rayOutputResult.HasHit && rayOutputResult.HitTagIndex == System.Array.IndexOf(detectableObjects, "Male"))
+            else if (rayOutputResult.HasHit && rayOutputResult.HitGameObject.CompareTag("Male"))
             {
                 // Reward the agent for detecting a 'Female' object
-                // AddReward(0.1f);
-                m_AgentGroup.AddGroupReward(0.01f);
+                AddReward(0.1f);
+                castleArea.UpdateScore(GetCumulativeReward());
+                // m_AgentGroup.AddGroupReward(0.01f);
                 Debug.Log("Detected a 'MALE' object and rewarded the agent!");
+            }
+
+            if (!rayOutputResult.HasHit)
+            {
+                Vector3 infinity = new Vector3(100, 100, 100);
+                sensor.AddObservation(infinity);
             }
         }
 
@@ -231,10 +246,15 @@ public override void CollectObservations(VectorSensor sensor)
         sensor.AddObservation(CastleArea.numBricks); // Global number of bricks
         // Add other relevant observations if needed
 
-        if (targetTransform != null)
-        {
-            sensor.AddObservation(targetTransform.position);   
-        }
+        // if (targetTransform != null)
+        // {
+        //     sensor.AddObservation(targetTransform.position);   
+        // }
+        // else
+        // {
+        //     Vector3 infinity = new Vector3(100, 100, 100);
+        //     sensor.AddObservation(infinity);
+        // }
         
         castleArea.UpdateScore(GetCumulativeReward());
     }
@@ -244,7 +264,6 @@ public override void CollectObservations(VectorSensor sensor)
         // Define a bounding box for collision detection (adjust size and position as needed)
         // Vector3 boxSize = new Vector3(1.0f, 1.0f, 1.0f); // Example size, adjust for your agent's dimensions
         // Retrieve the BoxCollider component from the agent
-        BoxCollider boxCollider = GetComponent<BoxCollider>();
     
         if (boxCollider == null)
         {
@@ -424,7 +443,7 @@ private void PickUpObject()
 
             // Save the object's original rotation
             // Set the original rotation to (0, 0, 0)
-            originalRotation = Quaternion.identity;
+            startingRot = Quaternion.identity;
 
             // Disable the object's physics and collider to prevent distortion and interference with Raycasts
             Rigidbody rbPickable = pickedUpObject.GetComponent<Rigidbody>();
@@ -550,7 +569,9 @@ private void DropObject()
         CastleArea.SubtractBricks(brickCostPerObject);
         Debug.Log($"Take: {CastleArea.numBricks}");
 
-        m_AgentGroup.AddGroupReward(0.001f);
+        // m_AgentGroup.AddGroupReward(0.001f);
+        AddReward(0.0001f);
+        castleArea.UpdateScore(GetCumulativeReward());
     }
     
     public void CreateFoodProp()
@@ -568,6 +589,7 @@ private void DropObject()
             GameObject newTarget = CreateProp("Sphere", randomLocalPosition, rotation);
             newTarget.transform.parent = envLocation;
             spawnedTargetList.Add(newTarget);
+            Debug.Log("Created sphere");
         }
 
     }
@@ -755,28 +777,38 @@ private void DropObject()
             spawnedTargetList.Remove(other.gameObject);
             Destroy(other.gameObject);
             m_AgentGroup.AddGroupReward(0.1f);
-            
+            castleArea.UpdateScore(GetCumulativeReward());
             
             if (spawnedTargetList.Count == 0)
             {
                 envMaterial.color = Color.green;
                 m_AgentGroup.AddGroupReward(0.05f);
-                removeTarget(spawnedTargetList);
+                castleArea.UpdateScore(GetCumulativeReward());
+                // removeTarget(spawnedTargetList);
                 m_AgentGroup.EndGroupEpisode();
             }
             
         }
         
-        if (other.gameObject.tag =="Wall")
+        if (other.gameObject.tag =="Male")
         {
-            envMaterial.color = Color.red;
-            removeTarget(spawnedTargetList);
-            m_AgentGroup.AddGroupReward(-0.5f);
-            // Debug.Log("hit wall");
-            // Debug.Log(GetCumulativeReward());
-            m_AgentGroup.EndGroupEpisode();
-            castleArea.ResetArea();
+            
+            AddReward(-0.1f);
+            envMaterial.color = Color.yellow;
+            Debug.Log("Caught male");
+            castleArea.ResetAgent(this.gameObject);
+            castleArea.UpdateScore(GetCumulativeReward());
         }
-        castleArea.UpdateScore(GetCumulativeReward());
+        
+        // if (other.gameObject.tag =="Wall")
+        // {
+        //     envMaterial.color = Color.red;
+        //     removeTarget(spawnedTargetList);
+        //     m_AgentGroup.AddGroupReward(-0.5f);
+        //     // Debug.Log("hit wall");
+        //     // Debug.Log(GetCumulativeReward());
+        //     m_AgentGroup.EndGroupEpisode();
+        //     castleArea.ResetArea();
+        // }
     }
 }

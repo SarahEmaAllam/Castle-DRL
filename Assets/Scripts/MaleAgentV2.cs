@@ -10,6 +10,7 @@ public class MaleAgentV2 : Agent
 
 {
     
+    private RayPerceptionSensorComponent3D rayPerceptionSensor;
     // target variables for builing
     [SerializeField] private Transform buildTransform;
     // [SerializeField] private List<GameObject> spawnedBuildList = new List<GameObject>();
@@ -20,9 +21,13 @@ public class MaleAgentV2 : Agent
     // private float RAY_RANGE = 5f;
     
     // agent variables
+    [Header("TEAM")]
+
+    public int teamID = 1;
     [SerializeField] private float moveSpeed = 1.0f;
     private float rotateSpeed = 100f;
     private Rigidbody rb;
+    public BoxCollider boxCollider;
     // [SerializeField]
     // private LayerMask pickableLayerMask;
     // [SerializeField]
@@ -41,33 +46,35 @@ public class MaleAgentV2 : Agent
     private bool canPickUp = false;
     private bool canBuild = true;
     // Class-level variable to store the original rotation of the picked-up object
-    private Quaternion originalRotation;
+    private Quaternion startingRot;
+    private Vector3 startingPos;
+
     
     // env variables
     private CastleArea castleArea;
     [SerializeField] private Transform envLocation;
     Material envMaterial;
     public GameObject env;
-    public GameObject female;
-    public CastleAgent classObject;
-    
-    // multi agents setup
-    private SimpleMultiAgentGroup m_AgentGroup; // Multi-agent group
-    public List<Agent> AgentList; // List of agents to be added to the group
 
 
 
     public override void Initialize()
     {
-        // Initialize the Multi-Agent Group
-        m_AgentGroup = new SimpleMultiAgentGroup();
-        foreach (var agent in AgentList)
+        // // Initialize the Multi-Agent Group
+        // m_AgentGroup = new SimpleMultiAgentGroup();
+        // foreach (var agent in AgentList)
+        // {
+        //     m_AgentGroup.RegisterAgent(agent);
+        //     castleArea.RandomlyPlaceObject(agent.gameObject, 10f, 3);
+        // }
+        rayPerceptionSensor = GetComponent<RayPerceptionSensorComponent3D>();
+
+        if (rayPerceptionSensor == null)
         {
-            m_AgentGroup.RegisterAgent(agent);
-            castleArea.RandomlyPlaceObject(agent.gameObject, 10f, 3);
+            Debug.LogError("RayPerceptionSensorComponent3D not found!");
         }
-        
         rb = GetComponent<Rigidbody>();
+        boxCollider = GetComponent<BoxCollider>();
         castleArea = transform.parent.GetComponent<CastleArea>();
         envMaterial = env.GetComponent<Renderer>().material;
         canPickUp = false;
@@ -84,8 +91,8 @@ public class MaleAgentV2 : Agent
         // rayPerception = GetComponent<RayPerceptionSensorComponent3D>();
     }
     
-    public override void OnEpisodeBegin()
-    {
+    // public override void OnEpisodeBegin()
+    // {
         
         // Register all agents in the group at the start of the episode
         // foreach (var agent in AgentList)
@@ -105,7 +112,7 @@ public class MaleAgentV2 : Agent
         // }
         //
         // transform.localPosition = spawnLocation;
-    }
+    // }
 
     
 
@@ -175,46 +182,76 @@ public class MaleAgentV2 : Agent
         return false;
     }
     
-   public override void CollectObservations(VectorSensor sensor)
+    private void checkRayCast()
     {
-        // Define raycast parameters
-        float rayDistance = 10f;
-        float[] rayAngles = { 30f }; // Adjust angles if needed
-        string[] detectableObjects = { "Floor", "Wall", "Female", "Male", "Ground", "Column" }; // Tags the rays can detect
+        // RayPerceptionSensorComponent3D m_rayPerceptionSensorComponent3D = GetComponent<RayPerceptionSensorComponent3D>();
 
-        // Define the RayPerceptionInput
-        RayPerceptionInput rayInput = new RayPerceptionInput
+        var rayOutputs = RayPerceptionSensor.Perceive(rayPerceptionSensor.GetRayPerceptionInput()).RayOutputs;
+        int lengthOfRayOutputs = rayOutputs.Length;
+
+        // Alternating Ray Order: it gives an order of
+        // (0, -delta, delta, -2delta, 2delta, ..., -ndelta, ndelta)
+        // index 0 indicates the center of raycasts
+        for (int i = 0; i < lengthOfRayOutputs; i++)
         {
-            RayLength = rayDistance,
-            Angles = rayAngles,
-            DetectableTags = detectableObjects,
-            StartOffset = 0f,
-            EndOffset = 0f,
-            Transform = this.transform,
-            CastRadius = 0f, // Adjust if needed
-        };
+            GameObject goHit = rayOutputs[i].HitGameObject;
+            if (goHit != null)
+            {
+                var rayDirection = rayOutputs[i].EndPositionWorld - rayOutputs[i].StartPositionWorld;
+                var scaledRayLength = rayDirection.magnitude;
+                float rayHitDistance = rayOutputs[i].HitFraction * scaledRayLength;
 
-        // Use RayPerceptionInput with Perceive method
-        RayPerceptionOutput rayOutput = RayPerceptionSensor.Perceive(rayInput);
+                // Print info:
+                string dispStr = "";
+                dispStr = dispStr + "__RayPerceptionSensor - HitInfo__:\r\n";
+                dispStr = dispStr + "GameObject name: " + goHit.name + "\r\n";
+                dispStr = dispStr + "Hit distance of Ray: " + rayHitDistance + "\r\n";
+                dispStr = dispStr + "GameObject tag: " + goHit.tag + "\r\n";
+                Debug.Log(dispStr);
+            }
+        }
+    }
 
+    public override void CollectObservations(VectorSensor sensor)
+    {
+        var rayOutputs = RayPerceptionSensor.Perceive(rayPerceptionSensor.GetRayPerceptionInput()).RayOutputs;
+        int lengthOfRayOutputs = rayOutputs.Length;
+        
         // Add observations and check for 'Female' tag
-        foreach (var rayOutputResult in rayOutput.RayOutputs)
+        for (int i = 0; i < lengthOfRayOutputs; i++)
         {
-            // Add the distance to the detected object as an observation
-            sensor.AddObservation(rayOutputResult.HitFraction);
-
+            var rayOutputResult = rayOutputs[i];
+            Debug.Log($"Ray hit object: {rayOutputResult.HitTaggedObject}");
+    
+    
             // Add whether a hit was detected (1 if true, 0 if false)
-            sensor.AddObservation(rayOutputResult.HasHit ? 1 : 0);
-
-            // Add the tag of the detected object as an integer
-            sensor.AddObservation(rayOutputResult.HitTagIndex);
-
+            if (rayOutputResult.HasHit)
+            {
+                Debug.Log($"HASHIT: {rayOutputResult.HitGameObject.tag}");
+                sensor.AddObservation(1);
+                // Add the distance to the detected object as an observation
+                sensor.AddObservation(rayOutputResult.HitFraction);
+                // Add the tag of the detected object as an integer
+                sensor.AddObservation(rayOutputResult.HitTagIndex);
+            }
+            else
+            {
+                sensor.AddObservation(0);
+                // Add the distance to the detected object as an observation
+                sensor.AddObservation(100);
+                // Add the tag of the detected object as an integer
+                sensor.AddObservation(100);
+            }
+            
+            Debug.Log($"HAS HIT: {rayOutputResult.HasHit}");
+    
             // Check if the detected object has the 'Female' tag and reward the agent
-            if (rayOutputResult.HasHit && rayOutputResult.HitTagIndex == System.Array.IndexOf(detectableObjects, "Female"))
+            if (rayOutputResult.HasHit && rayOutputResult.HitGameObject.gameObject.CompareTag("Female"))
             {
                 // Reward the agent for detecting a 'Female' object
-                // AddReward(0.1f);
-                m_AgentGroup.AddGroupReward(0.01f);
+                AddReward(0.1f);
+                castleArea.UpdateScore(GetCumulativeReward());
+                // m_AgentGroup.AddGroupReward(0.01f);
                 
                 Debug.Log("Detected a 'Female' object and rewarded the agent!");
                 
@@ -223,12 +260,19 @@ public class MaleAgentV2 : Agent
                 CastleAgent femaleAgent = femaleCollider.GetComponent<CastleAgent>();
                 if (femaleAgent != null)
                 {
-                    femaleAgent.m_AgentGroup.AddGroupReward(-0.01f);
+                    sensor.AddObservation(femaleAgent.transform.position);
+                    femaleAgent.AddReward(-0.01f);
+                    castleArea.UpdateScore(GetCumulativeReward());
                     Debug.Log("Female agent detected by a male agent and penalized!");
                 }
             }
+            else
+            {
+                Vector3 infinity = new Vector3(100, 100, 100);
+                sensor.AddObservation(infinity);
+            }
         }
-
+    
         // Add additional observations
         sensor.AddObservation(transform.position); // Agent's position
         sensor.AddObservation(CastleArea.numBricks); // Global number of bricks
@@ -240,7 +284,6 @@ public class MaleAgentV2 : Agent
 private bool WouldCollide(Vector3 moveVector)
 {
     // Retrieve the BoxCollider component from the agent
-    BoxCollider boxCollider = GetComponent<BoxCollider>();
 
     if (boxCollider == null)
     {
@@ -471,7 +514,7 @@ private void PickUpObject()
 
             // Save the object's original rotation
             // Set the original rotation to (0, 0, 0)
-            originalRotation = Quaternion.identity;
+            startingRot = Quaternion.identity;
 
             // Disable the object's physics and collider to prevent distortion and interference with Raycasts
             Rigidbody rbPickable = pickedUpObject.GetComponent<Rigidbody>();
@@ -600,7 +643,8 @@ private void DropObject()
 
         // AddReward(0.001f);
         // if the team scores a goal
-        m_AgentGroup.AddGroupReward(0.001f);
+        AddReward(0.0001f);
+        castleArea.UpdateScore(GetCumulativeReward());
     }
     
     // Function to destroy the object
@@ -788,17 +832,7 @@ private void DropObject()
     {
         
         // Determine state
-        if (GetCumulativeReward() <= -500f)
-        {
-            // Reward is too negative, give up
-            m_AgentGroup.EndGroupEpisode();
-
-            // Indicate failure with the ground material
-            StartCoroutine(castleArea.SwapGroundMaterial(success: false));
-
-            // Reset
-            castleArea.ResetArea();
-        }
+        
         // else if (buildCount >= agentArea.GetBricksObjects().Count)
         // {
         //     // All truffles collected, success!
@@ -817,52 +851,29 @@ private void DropObject()
         //     agentArea.UpdateScore(GetCumulativeReward());
         // }
         
-        // if (other.gameObject.tag =="Female")
-        // {
-        //     
-        //     // AddReward(0.1f);
-        //     // classObject = other.gameObject;
-        //     // classObject.AddReward(-0.1f);
-        //     // Debug.Log("Caught Female");
-        //     // envMaterial.color = Color.yellow;
-        //     // agentArea.UpdateScore(GetCumulativeReward());
-        //     // // end the caught agent's episode
-        //     // classObject.EndEpisode();
-        //     // // then end hunter episode
-        //     // EndEpisode();
-        //     
-        //     CastleAgent castleAgent = other.gameObject.GetComponent<CastleAgent>();
-        //     if (castleAgent != null)
-        //     {
-        //         // CastleAgent receives negative reward and ends episode
-        //         // castleAgent.AddReward(-0.1f);
-        //         castleAgent.m_AgentGroup.AddGroupReward(-0.1f);
-        //         castleAgent.m_AgentGroup.EndGroupEpisode();
-        //         Debug.Log("Caught Female");
-        //         envMaterial.color = Color.yellow;
-        //         castleArea.UpdateScore(GetCumulativeReward());
-        //         // MaleAgent receives positive reward
-        //         // AddReward(0.1f);
-        //         m_AgentGroup.EndGroupEpisode();
-        //         castleArea.ResetArea();
-        //         // EndEpisode();
-        //     }
-        //     
-        // }
-        
-        if (other.gameObject.tag =="Wall")
+        if (other.gameObject.tag =="Female")
         {
-            // Debug.Log("hit wall");
-            envMaterial.color = Color.red;
-            // AddReward(-0.5f);
-            m_AgentGroup.AddGroupReward(-0.5f);
+            
+            AddReward(-0.1f);
             castleArea.UpdateScore(GetCumulativeReward());
-            Debug.Log("hit wall");
-            // agentArea.ResetAgent(this.gameObject);
-            m_AgentGroup.EndGroupEpisode();
-            castleArea.ResetArea();
-
+            Debug.Log("Caught female");
+            castleArea.ResetAgent(this.gameObject);
+            
         }
+        
+        // if (other.gameObject.tag =="Wall")
+        // {
+        //     // Debug.Log("hit wall");
+        //     envMaterial.color = Color.red;
+        //     // AddReward(-0.5f);
+        //     AddReward(-0.5f);
+        //     castleArea.UpdateScore(GetCumulativeReward());
+        //     Debug.Log("hit wall");
+        //     // agentArea.ResetAgent(this.gameObject);
+        //     m_AgentGroup.EndGroupEpisode();
+        //     castleArea.ResetArea();
+        //
+        // }
         
     }
     

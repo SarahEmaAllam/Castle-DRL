@@ -1149,7 +1149,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 9095062556262540513, guid: 542dfe73c929a6e41b462471c97ba62d, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 12.7
+      value: 5.97
       objectReference: {fileID: 0}
     - target: {fileID: 9095062556262540513, guid: 542dfe73c929a6e41b462471c97ba62d, type: 3}
       propertyPath: m_LocalPosition.y
@@ -1157,7 +1157,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 9095062556262540513, guid: 542dfe73c929a6e41b462471c97ba62d, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -3.16
+      value: -7.82
       objectReference: {fileID: 0}
     - target: {fileID: 9095062556262540513, guid: 542dfe73c929a6e41b462471c97ba62d, type: 3}
       propertyPath: m_LocalRotation.w
@@ -2019,6 +2019,14 @@ PrefabInstance:
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 9095062556262540525, guid: 542dfe73c929a6e41b462471c97ba62d, type: 3}
+      propertyPath: m_MaxRayDegrees
+      value: 30
+      objectReference: {fileID: 0}
+    - target: {fileID: 9095062556262540525, guid: 542dfe73c929a6e41b462471c97ba62d, type: 3}
+      propertyPath: m_RayLayerMask.m_Bits
+      value: 115
+      objectReference: {fileID: 0}
+    - target: {fileID: 9095062556262540525, guid: 542dfe73c929a6e41b462471c97ba62d, type: 3}
       propertyPath: m_DetectableTags.Array.size
       value: 5
       objectReference: {fileID: 0}
@@ -2147,6 +2155,17 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 3
+--- !u!114 &655620397 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 9095062556262540527, guid: 542dfe73c929a6e41b462471c97ba62d, type: 3}
+  m_PrefabInstance: {fileID: 655620390}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 655620392}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d596dd430bbe343448331984cf92910f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &685371224
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2882,6 +2901,34 @@ PrefabInstance:
       propertyPath: m_BrainParameters.m_ActionSpec.BranchSizes.Array.data[0]
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 4898985608966629528, guid: fe77c2f772243df48926cb795290de74, type: 3}
+      propertyPath: Team0Players.Array.size
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 4898985608966629528, guid: fe77c2f772243df48926cb795290de74, type: 3}
+      propertyPath: Team1Players.Array.size
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 4898985608966629528, guid: fe77c2f772243df48926cb795290de74, type: 3}
+      propertyPath: Team0Players.Array.data[0].Agent
+      value: 
+      objectReference: {fileID: 391921079}
+    - target: {fileID: 4898985608966629528, guid: fe77c2f772243df48926cb795290de74, type: 3}
+      propertyPath: Team0Players.Array.data[1].Agent
+      value: 
+      objectReference: {fileID: 831164813}
+    - target: {fileID: 4898985608966629528, guid: fe77c2f772243df48926cb795290de74, type: 3}
+      propertyPath: Team0Players.Array.data[2].Agent
+      value: 
+      objectReference: {fileID: 655620397}
+    - target: {fileID: 4898985608966629528, guid: fe77c2f772243df48926cb795290de74, type: 3}
+      propertyPath: Team1Players.Array.data[0].Agent
+      value: 
+      objectReference: {fileID: 1865116692}
+    - target: {fileID: 4898985608966629528, guid: fe77c2f772243df48926cb795290de74, type: 3}
+      propertyPath: Team1Players.Array.data[1].Agent
+      value: 
+      objectReference: {fileID: 2038064594}
     - target: {fileID: 5288018918230510851, guid: fe77c2f772243df48926cb795290de74, type: 3}
       propertyPath: m_BehaviorName
       value: Female Agent
@@ -3258,7 +3305,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 557199577129818045, guid: 591a46a008d2f3c48ad4fe59debb1155, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 557199577129818046, guid: 591a46a008d2f3c48ad4fe59debb1155, type: 3}
       propertyPath: m_RootOrder
@@ -3266,15 +3313,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 557199577129818046, guid: 591a46a008d2f3c48ad4fe59debb1155, type: 3}
       propertyPath: m_LocalScale.x
-      value: 0.3
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 557199577129818046, guid: 591a46a008d2f3c48ad4fe59debb1155, type: 3}
       propertyPath: m_LocalScale.y
-      value: 0.3
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 557199577129818046, guid: 591a46a008d2f3c48ad4fe59debb1155, type: 3}
       propertyPath: m_LocalScale.z
-      value: 0.3
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 557199577129818046, guid: 591a46a008d2f3c48ad4fe59debb1155, type: 3}
       propertyPath: m_LocalPosition.x
@@ -3286,7 +3333,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 557199577129818046, guid: 591a46a008d2f3c48ad4fe59debb1155, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -8.15
+      value: -4.4
       objectReference: {fileID: 0}
     - target: {fileID: 557199577129818046, guid: 591a46a008d2f3c48ad4fe59debb1155, type: 3}
       propertyPath: m_LocalRotation.w
@@ -6245,7 +6292,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 9076019665636924479, guid: 0bca7a04c3f8d294184201a1045b4838, type: 3}
       propertyPath: m_BrainParameters.VectorObservationSize
-      value: 7
+      value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 9076019665636924479, guid: 0bca7a04c3f8d294184201a1045b4838, type: 3}
       propertyPath: m_BrainParameters.VectorActionSize.Array.size
@@ -6318,13 +6365,12 @@ MonoBehaviour:
   hasUpgradedFromAgentParameters: 1
   MaxStep: 0
   buildTransform: {fileID: 0}
+  teamID: 1
   moveSpeed: 1
+  boxCollider: {fileID: 0}
   hitRange: 3
   envLocation: {fileID: 831164810}
   env: {fileID: 831164811}
-  female: {fileID: 831164812}
-  classObject: {fileID: 831164813}
-  AgentList: []
 --- !u!114 &1865116693
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6642,13 +6688,12 @@ MonoBehaviour:
   hasUpgradedFromAgentParameters: 1
   MaxStep: 0
   buildTransform: {fileID: 0}
+  teamID: 1
   moveSpeed: 5
+  boxCollider: {fileID: 0}
   hitRange: 3
   envLocation: {fileID: 831164810}
   env: {fileID: 831164811}
-  female: {fileID: 831164812}
-  classObject: {fileID: 831164813}
-  AgentList: []
 --- !u!114 &1953994738
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7126,7 +7171,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 9076019665636924479, guid: 0bca7a04c3f8d294184201a1045b4838, type: 3}
       propertyPath: m_BrainParameters.VectorObservationSize
-      value: 7
+      value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 9076019665636924479, guid: 0bca7a04c3f8d294184201a1045b4838, type: 3}
       propertyPath: m_BrainParameters.VectorActionSize.Array.size
@@ -7229,13 +7274,12 @@ MonoBehaviour:
   hasUpgradedFromAgentParameters: 1
   MaxStep: 0
   buildTransform: {fileID: 0}
+  teamID: 1
   moveSpeed: 1
+  boxCollider: {fileID: 0}
   hitRange: 3
   envLocation: {fileID: 831164810}
   env: {fileID: 831164811}
-  female: {fileID: 831164812}
-  classObject: {fileID: 831164813}
-  AgentList: []
 --- !u!65 &2038064595
 BoxCollider:
   m_ObjectHideFlags: 0
