@@ -249,8 +249,7 @@ public class MaleAgentV2 : Agent
             if (rayOutputResult.HasHit && rayOutputResult.HitGameObject.gameObject.CompareTag("Female"))
             {
                 // Reward the agent for detecting a 'Female' object
-                AddReward(0.1f);
-                castleArea.UpdateScore(GetCumulativeReward());
+                castleArea.m_Team1AgentGroup.AddGroupReward(0.0001f);
                 // m_AgentGroup.AddGroupReward(0.01f);
                 
                 Debug.Log("Detected a 'Female' object and rewarded the agent!");
@@ -261,8 +260,7 @@ public class MaleAgentV2 : Agent
                 if (femaleAgent != null)
                 {
                     sensor.AddObservation(femaleAgent.transform.position);
-                    femaleAgent.AddReward(-0.01f);
-                    castleArea.UpdateScore(GetCumulativeReward());
+                    castleArea.m_Team0AgentGroup.AddGroupReward(-0.0001f);
                     Debug.Log("Female agent detected by a male agent and penalized!");
                 }
             }
@@ -276,7 +274,6 @@ public class MaleAgentV2 : Agent
         // Add additional observations
         sensor.AddObservation(transform.position); // Agent's position
         sensor.AddObservation(CastleArea.numBricks); // Global number of bricks
-        castleArea.UpdateScore(GetCumulativeReward());
         // Add other relevant observations if needed
     }
     
@@ -643,8 +640,7 @@ private void DropObject()
 
         // AddReward(0.001f);
         // if the team scores a goal
-        AddReward(0.0001f);
-        castleArea.UpdateScore(GetCumulativeReward());
+        castleArea.m_Team1AgentGroup.AddGroupReward(0.0001f);
     }
     
     // Function to destroy the object
@@ -801,7 +797,6 @@ private void DropObject()
             {
                 DestroyObject();
             }
-            castleArea.UpdateScore(GetCumulativeReward());
     }
     
     public override void Heuristic(in ActionBuffers actionsOut)
@@ -854,8 +849,8 @@ private void DropObject()
         if (other.gameObject.tag =="Female")
         {
             
-            AddReward(-0.1f);
-            castleArea.UpdateScore(GetCumulativeReward());
+            castleArea.m_Team1AgentGroup.AddGroupReward(-0.1f);
+            
             Debug.Log("Caught female");
             castleArea.ResetAgent(this.gameObject);
             

@@ -49,9 +49,7 @@ public class CastleAgent : Agent
     private Vector3 startingPos;
     
     // multi agents setup
-    public SimpleMultiAgentGroup m_AgentGroup; // Multi-agent group
-    public List<Agent> AgentList; // List of agents to be added to the group
-    
+
 
 
 
@@ -68,7 +66,12 @@ public class CastleAgent : Agent
         
         rb = GetComponent<Rigidbody>();
         boxCollider = GetComponent<BoxCollider>();
-        castleArea = transform.parent.GetComponent<CastleArea>();
+        // castleArea = transform.parent.GetComponent<CastleArea>();
+        castleArea = GetComponentInParent<CastleArea>();
+        if (castleArea == null)
+        {
+            Debug.LogError("castleArea or m_Team0AgentGroup is not initialized.");
+        }
         envMaterial = env.GetComponent<Renderer>().material;
         canPickUp = false;
         canBuild = true;
@@ -219,8 +222,14 @@ public class CastleAgent : Agent
             if (rayOutputResult.HasHit && rayOutputResult.HitGameObject.CompareTag("Female"))
             {
                 // Reward the agent for detecting a 'Female' object
-                AddReward(0.1f);
-                castleArea.UpdateScore(GetCumulativeReward());
+                if (castleArea.m_Team0AgentGroup != null)
+                {
+                    castleArea.m_Team0AgentGroup.AddGroupReward(0.0001f);
+                }
+                else
+                {
+                    Debug.LogError($"not init {castleArea.m_Team0AgentGroup}");
+                }
                 // m_AgentGroup.AddGroupReward(0.01f);
                 Debug.Log("Detected a 'FEMALE' object and rewarded the agent!");
             }
@@ -228,8 +237,7 @@ public class CastleAgent : Agent
             else if (rayOutputResult.HasHit && rayOutputResult.HitGameObject.CompareTag("Male"))
             {
                 // Reward the agent for detecting a 'Female' object
-                AddReward(0.1f);
-                castleArea.UpdateScore(GetCumulativeReward());
+                castleArea.m_Team0AgentGroup.AddGroupReward(0.0001f);
                 // m_AgentGroup.AddGroupReward(0.01f);
                 Debug.Log("Detected a 'MALE' object and rewarded the agent!");
             }
@@ -256,7 +264,6 @@ public class CastleAgent : Agent
         //     sensor.AddObservation(infinity);
         // }
         
-        castleArea.UpdateScore(GetCumulativeReward());
     }
 
     private bool WouldCollide(Vector3 moveVector)
@@ -570,8 +577,7 @@ private void DropObject()
         Debug.Log($"Take: {CastleArea.numBricks}");
 
         // m_AgentGroup.AddGroupReward(0.001f);
-        AddReward(0.0001f);
-        castleArea.UpdateScore(GetCumulativeReward());
+        castleArea.m_Team0AgentGroup.AddGroupReward(0.0001f);
     }
     
     public void CreateFoodProp()
@@ -741,7 +747,6 @@ private void DropObject()
             {
                 DestroyObject();
             }
-            castleArea.UpdateScore(GetCumulativeReward());
 
     }
     
@@ -776,16 +781,14 @@ private void DropObject()
             
             spawnedTargetList.Remove(other.gameObject);
             Destroy(other.gameObject);
-            m_AgentGroup.AddGroupReward(0.1f);
-            castleArea.UpdateScore(GetCumulativeReward());
+            castleArea.m_Team0AgentGroup.AddGroupReward(0.1f);
             
             if (spawnedTargetList.Count == 0)
             {
                 envMaterial.color = Color.green;
-                m_AgentGroup.AddGroupReward(0.05f);
-                castleArea.UpdateScore(GetCumulativeReward());
+                castleArea.m_Team0AgentGroup.AddGroupReward(0.05f);
                 // removeTarget(spawnedTargetList);
-                m_AgentGroup.EndGroupEpisode();
+                castleArea.m_Team0AgentGroup.EndGroupEpisode();
             }
             
         }
@@ -793,11 +796,10 @@ private void DropObject()
         if (other.gameObject.tag =="Male")
         {
             
-            AddReward(-0.1f);
+            castleArea.m_Team0AgentGroup.AddGroupReward(-0.1f);
             envMaterial.color = Color.yellow;
             Debug.Log("Caught male");
             castleArea.ResetAgent(this.gameObject);
-            castleArea.UpdateScore(GetCumulativeReward());
         }
         
         // if (other.gameObject.tag =="Wall")

@@ -251,7 +251,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 1c8eb73d55c2d6943a9ec3c15c08cf1a, type: 3}
       propertyPath: m_LocalScale.x
-      value: 100
+      value: 70
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 1c8eb73d55c2d6943a9ec3c15c08cf1a, type: 3}
       propertyPath: m_LocalScale.y
@@ -259,7 +259,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 1c8eb73d55c2d6943a9ec3c15c08cf1a, type: 3}
       propertyPath: m_LocalScale.z
-      value: 60
+      value: 20
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 1c8eb73d55c2d6943a9ec3c15c08cf1a, type: 3}
       propertyPath: m_LocalPosition.x
@@ -353,6 +353,79 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 3
+--- !u!1001 &55380991
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    m_TransformParent: {fileID: 831164810}
+    m_Modifications:
+    - target: {fileID: 8222254017860704004, guid: 42097a38305f27341a20736f8dd26ad6, type: 3}
+      propertyPath: m_UseGravity
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8222254017860704004, guid: 42097a38305f27341a20736f8dd26ad6, type: 3}
+      propertyPath: m_Constraints
+      value: 126
+      objectReference: {fileID: 0}
+    - target: {fileID: 8222254017860704004, guid: 42097a38305f27341a20736f8dd26ad6, type: 3}
+      propertyPath: m_IsKinematic
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8222254017860704004, guid: 42097a38305f27341a20736f8dd26ad6, type: 3}
+      propertyPath: m_CollisionDetection
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 8471808604245127405, guid: 42097a38305f27341a20736f8dd26ad6, type: 3}
+      propertyPath: m_RootOrder
+      value: 78
+      objectReference: {fileID: 0}
+    - target: {fileID: 8471808604245127405, guid: 42097a38305f27341a20736f8dd26ad6, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -21.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 8471808604245127405, guid: 42097a38305f27341a20736f8dd26ad6, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -0.5000011
+      objectReference: {fileID: 0}
+    - target: {fileID: 8471808604245127405, guid: 42097a38305f27341a20736f8dd26ad6, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -8.18
+      objectReference: {fileID: 0}
+    - target: {fileID: 8471808604245127405, guid: 42097a38305f27341a20736f8dd26ad6, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8471808604245127405, guid: 42097a38305f27341a20736f8dd26ad6, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8471808604245127405, guid: 42097a38305f27341a20736f8dd26ad6, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8471808604245127405, guid: 42097a38305f27341a20736f8dd26ad6, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8471808604245127405, guid: 42097a38305f27341a20736f8dd26ad6, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8471808604245127405, guid: 42097a38305f27341a20736f8dd26ad6, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8471808604245127405, guid: 42097a38305f27341a20736f8dd26ad6, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9140681781640473175, guid: 42097a38305f27341a20736f8dd26ad6, type: 3}
+      propertyPath: m_Name
+      value: wallPaint_half (53)
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 42097a38305f27341a20736f8dd26ad6, type: 3}
 --- !u!1001 &84094476
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1208,6 +1281,10 @@ PrefabInstance:
       value: Column
       objectReference: {fileID: 0}
     - target: {fileID: 9095062556262540526, guid: 542dfe73c929a6e41b462471c97ba62d, type: 3}
+      propertyPath: m_Model
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 9095062556262540526, guid: 542dfe73c929a6e41b462471c97ba62d, type: 3}
       propertyPath: m_BehaviorName
       value: FemaleAgent
       objectReference: {fileID: 0}
@@ -1225,7 +1302,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 9095062556262540526, guid: 542dfe73c929a6e41b462471c97ba62d, type: 3}
       propertyPath: m_BrainParameters.VectorObservationSize
-      value: 10
+      value: 118
       objectReference: {fileID: 0}
     - target: {fileID: 9095062556262540526, guid: 542dfe73c929a6e41b462471c97ba62d, type: 3}
       propertyPath: m_BrainParameters.VectorActionSize.Array.size
@@ -2035,6 +2112,10 @@ PrefabInstance:
       value: Column
       objectReference: {fileID: 0}
     - target: {fileID: 9095062556262540526, guid: 542dfe73c929a6e41b462471c97ba62d, type: 3}
+      propertyPath: m_Model
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 9095062556262540526, guid: 542dfe73c929a6e41b462471c97ba62d, type: 3}
       propertyPath: m_BehaviorName
       value: FemaleAgent
       objectReference: {fileID: 0}
@@ -2052,7 +2133,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 9095062556262540526, guid: 542dfe73c929a6e41b462471c97ba62d, type: 3}
       propertyPath: m_BrainParameters.VectorObservationSize
-      value: 10
+      value: 118
       objectReference: {fileID: 0}
     - target: {fileID: 9095062556262540526, guid: 542dfe73c929a6e41b462471c97ba62d, type: 3}
       propertyPath: m_BrainParameters.VectorActionSize.Array.size
@@ -2686,6 +2767,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 875065480}
     - target: {fileID: 652456232828695431, guid: fe77c2f772243df48926cb795290de74, type: 3}
+      propertyPath: m_Model
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 652456232828695431, guid: fe77c2f772243df48926cb795290de74, type: 3}
       propertyPath: m_BehaviorName
       value: FemaleAgent
       objectReference: {fileID: 0}
@@ -2699,7 +2784,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 652456232828695431, guid: fe77c2f772243df48926cb795290de74, type: 3}
       propertyPath: m_BrainParameters.VectorObservationSize
-      value: 10
+      value: 118
       objectReference: {fileID: 0}
     - target: {fileID: 652456232828695431, guid: fe77c2f772243df48926cb795290de74, type: 3}
       propertyPath: m_BrainParameters.VectorActionSize.Array.size
@@ -5231,6 +5316,79 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 42097a38305f27341a20736f8dd26ad6, type: 3}
+--- !u!1001 &1682096309
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    m_TransformParent: {fileID: 831164810}
+    m_Modifications:
+    - target: {fileID: 8222254017860704004, guid: 42097a38305f27341a20736f8dd26ad6, type: 3}
+      propertyPath: m_UseGravity
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8222254017860704004, guid: 42097a38305f27341a20736f8dd26ad6, type: 3}
+      propertyPath: m_Constraints
+      value: 126
+      objectReference: {fileID: 0}
+    - target: {fileID: 8222254017860704004, guid: 42097a38305f27341a20736f8dd26ad6, type: 3}
+      propertyPath: m_IsKinematic
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8222254017860704004, guid: 42097a38305f27341a20736f8dd26ad6, type: 3}
+      propertyPath: m_CollisionDetection
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 8471808604245127405, guid: 42097a38305f27341a20736f8dd26ad6, type: 3}
+      propertyPath: m_RootOrder
+      value: 77
+      objectReference: {fileID: 0}
+    - target: {fileID: 8471808604245127405, guid: 42097a38305f27341a20736f8dd26ad6, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -21.5
+      objectReference: {fileID: 0}
+    - target: {fileID: 8471808604245127405, guid: 42097a38305f27341a20736f8dd26ad6, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: -0.5000011
+      objectReference: {fileID: 0}
+    - target: {fileID: 8471808604245127405, guid: 42097a38305f27341a20736f8dd26ad6, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: -4.95
+      objectReference: {fileID: 0}
+    - target: {fileID: 8471808604245127405, guid: 42097a38305f27341a20736f8dd26ad6, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8471808604245127405, guid: 42097a38305f27341a20736f8dd26ad6, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8471808604245127405, guid: 42097a38305f27341a20736f8dd26ad6, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8471808604245127405, guid: 42097a38305f27341a20736f8dd26ad6, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8471808604245127405, guid: 42097a38305f27341a20736f8dd26ad6, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8471808604245127405, guid: 42097a38305f27341a20736f8dd26ad6, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8471808604245127405, guid: 42097a38305f27341a20736f8dd26ad6, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 9140681781640473175, guid: 42097a38305f27341a20736f8dd26ad6, type: 3}
+      propertyPath: m_Name
+      value: wallPaint_half (52)
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 42097a38305f27341a20736f8dd26ad6, type: 3}
 --- !u!1001 &1700693442
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -6279,6 +6437,10 @@ PrefabInstance:
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 9076019665636924479, guid: 0bca7a04c3f8d294184201a1045b4838, type: 3}
+      propertyPath: m_Model
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 9076019665636924479, guid: 0bca7a04c3f8d294184201a1045b4838, type: 3}
       propertyPath: m_BehaviorName
       value: MaleAgentV
       objectReference: {fileID: 0}
@@ -6292,7 +6454,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 9076019665636924479, guid: 0bca7a04c3f8d294184201a1045b4838, type: 3}
       propertyPath: m_BrainParameters.VectorObservationSize
-      value: 10
+      value: 118
       objectReference: {fileID: 0}
     - target: {fileID: 9076019665636924479, guid: 0bca7a04c3f8d294184201a1045b4838, type: 3}
       propertyPath: m_BrainParameters.VectorActionSize.Array.size
@@ -7158,6 +7320,10 @@ PrefabInstance:
       value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 9076019665636924479, guid: 0bca7a04c3f8d294184201a1045b4838, type: 3}
+      propertyPath: m_Model
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 9076019665636924479, guid: 0bca7a04c3f8d294184201a1045b4838, type: 3}
       propertyPath: m_BehaviorName
       value: MaleAgentV
       objectReference: {fileID: 0}
@@ -7171,7 +7337,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 9076019665636924479, guid: 0bca7a04c3f8d294184201a1045b4838, type: 3}
       propertyPath: m_BrainParameters.VectorObservationSize
-      value: 10
+      value: 118
       objectReference: {fileID: 0}
     - target: {fileID: 9076019665636924479, guid: 0bca7a04c3f8d294184201a1045b4838, type: 3}
       propertyPath: m_BrainParameters.VectorActionSize.Array.size

@@ -15,7 +15,7 @@ public class CastleArea : MonoBehaviour
     public Material failureMaterial;
     public TextMeshPro scoreText;
     private int m_ResetTimer;
-    public int MaxEnvironmentSteps = 10000;
+    public int MaxEnvironmentSteps = 1000;
     
     [Header("Prefabs")]
     public GameObject agentPrefab;
@@ -27,7 +27,7 @@ public class CastleArea : MonoBehaviour
     [HideInInspector]
     public static int numAgents;
     [HideInInspector]
-    public float spawnRange;
+    public float spawnRange = 20;
     
     private List<GameObject> spawnedWalls;
     
@@ -63,8 +63,8 @@ public class CastleArea : MonoBehaviour
         public int TeamID;
     }
     
-    private SimpleMultiAgentGroup m_Team0AgentGroup;
-    private SimpleMultiAgentGroup m_Team1AgentGroup;
+    public SimpleMultiAgentGroup m_Team0AgentGroup;
+    public SimpleMultiAgentGroup m_Team1AgentGroup;
     public List<FemaleInfo> Team0Players;
     public List<MaleInfo> Team1Players;
 
@@ -75,7 +75,10 @@ public class CastleArea : MonoBehaviour
     private Material groundMaterial;
     private bool m_Initialized;
     
-    
+    void Start()
+    {
+        Initialize();
+    }
     private void Initialize()
     {
         // Get the ground renderer so we can change the material when a goal is scored
@@ -133,10 +136,14 @@ public class CastleArea : MonoBehaviour
         if (!m_Initialized) return;
         //RESET SCENE IF WE MaxEnvironmentSteps
         m_ResetTimer += 1;
+        if (m_ResetTimer % 100 == 0)
+        {
+            m_Team0AgentGroup.EndGroupEpisode();
+            m_Team1AgentGroup.EndGroupEpisode();
+        }
+        
         if (m_ResetTimer >= MaxEnvironmentSteps)
         {
-            m_Team0AgentGroup.GroupEpisodeInterrupted();
-            m_Team1AgentGroup.GroupEpisodeInterrupted();
             ResetArea();
         }
     }
@@ -190,8 +197,8 @@ public class CastleArea : MonoBehaviour
     {
         if ( maxBricks < 10000f)
         {
-            numBricks += 0.001f;
-            maxBricks += 0.001f;
+            numBricks += 0.01f;
+            maxBricks += 0.01f;
             return true;
         }
         else
@@ -233,7 +240,7 @@ public class CastleArea : MonoBehaviour
     public void ResetAgent(GameObject agent)
     {
         // Reset location and rotation
-        RandomlyPlaceObject(agent, spawnRange, 10);
+        RandomlyPlaceObject(agent, 20, 10);
     }
 
     /// <summary>
@@ -256,7 +263,7 @@ public class CastleArea : MonoBehaviour
         {
             // Create a new wall instance and place it randomly
             GameObject wallInstance = Instantiate(wallPrefab, transform);
-            RandomlyPlaceObject(wallInstance, spawnRange, 50);
+            RandomlyPlaceObject(wallInstance, 20, 10);
             spawnedWalls.Add(wallInstance);
         }
     }
@@ -321,6 +328,7 @@ public class CastleArea : MonoBehaviour
             {
                 objectToPlace.transform.localPosition = randomLocalPosition;
                 occupiedPositions.Add(new Tuple<Vector3, float>(objectToPlace.transform.position, testRadius));
+                Debug.Log($"occupiedPosition: {transform.position + randomLocalPosition}");
                 break;
             }
             else if (attempt == maxAttempts)
@@ -371,6 +379,7 @@ public class CastleArea : MonoBehaviour
         {
             Vector3 occupiedPosition = occupied.Item1;
             float occupiedRadius = occupied.Item2;
+            Debug.Log($"new location: {testPosition}, radius: {occupiedRadius} ");
             if (Vector3.Distance(testPosition, occupiedPosition) - occupiedRadius <= testRadius)
             {
                 return false;
