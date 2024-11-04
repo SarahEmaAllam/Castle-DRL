@@ -11,9 +11,9 @@ public class CastleAgent : Agent
     // target variabvles
     private RayPerceptionSensorComponent3D rayPerceptionSensor;
     [SerializeField] private Transform targetTransform;
-    [SerializeField] private List<GameObject> spawnedTargetList = new List<GameObject>();
-    public int targetCount;
-    public GameObject food;
+    // [SerializeField] private List<GameObject> spawnedTargetList = new List<GameObject>();
+    // public int targetCount;
+    // public GameObject food;
     private float RAY_RANGE = 5f;
     
     // agent variables
@@ -26,13 +26,13 @@ public class CastleAgent : Agent
     BoxCollider boxCollider;
     
     // env variables
-    [SerializeField] private Transform envLocation;
+    private Transform envLocation;
     Material envMaterial;
     public GameObject env;
     
     // build variables
-    private const float brickCostPerObject = 1000f;
-    private string[] propNames = { "floor", "floorStairs", "column_mini", "Sphere" }; // List of props
+    private float penaltyForNothingAction = -0.00001f;
+    // private string[] propNames = { "floor", "floorStairs", "column_mini", "Sphere", "SphereF" }; // List of props
     private RaycastHit hit;
     // private RayPerceptionSensorComponent3D rayPerception;
     // Reference to the picked-up object
@@ -56,7 +56,7 @@ public class CastleAgent : Agent
     public override void Initialize()
     {
         // Initialize the Multi-Agent Group
-       
+        envLocation = transform.parent.gameObject.transform;
         rayPerceptionSensor = GetComponent<RayPerceptionSensorComponent3D>();
 
         if (rayPerceptionSensor == null)
@@ -90,92 +90,86 @@ public class CastleAgent : Agent
     // public override void OnEpisodeBegin()
     // {
     //     // Register all agents in the group at the start of the episode
-    //     foreach (var agent in AgentList)
-    //     {
-    //         m_AgentGroup.RegisterAgent(agent);
-    //         castleArea.ResetArea();
-    //         CreateFoodProp();
-    //     }
     //     
     //     // transform.localPosition = new Vector3(UnityEngine.Random.Range(-7f, 7f), 0, UnityEngine.Random.Range(-7f, 7f));
     //     
-    //     // CreateTarget();
+    //     CreateFoodProp();
     //     
     // }
     
 
-    private void CreateTarget()
-    {
-        if (spawnedTargetList.Count != 0)
-        {
-            removeTarget(spawnedTargetList);
-        }
-        
-        for (int i = 0; i < targetCount; i++)
-        {
-            int counter = 0;
-            bool distanceGood;
-            bool alreadyDecremented = false;
-            //  spawning object target
-            GameObject newTarget = Instantiate(food);
-            // make target child of env 
-            newTarget.transform.parent = envLocation;
-            // give random spawn location
-            // float x = r.Next(0, 5);
-            // float z = r.Next(0, 5);
-            Vector3 targetLocation = new Vector3(UnityEngine.Random.Range(-7f, 7f), 0, UnityEngine.Random.Range(-7f, 7f));
-            // check if distance is good
-            if (spawnedTargetList.Count != 0)
-            {
-                for (int k = 0; k < spawnedTargetList.Count; k++)
-                {
-                    if (counter < 10)
-                    {
-                        distanceGood = CheckOverlap(targetLocation, spawnedTargetList[k].transform.localPosition, RAY_RANGE);
-                        if (distanceGood == false)
-                        {
-                            targetLocation = new Vector3(UnityEngine.Random.Range(-7f, 7f), 0, UnityEngine.Random.Range(-7f, 7f));
-                            k--;
-                            alreadyDecremented = true;
+    // private void CreateTarget()
+    // {
+    //     if (spawnedTargetList.Count != 0)
+    //     {
+    //         removeTarget(spawnedTargetList);
+    //     }
+    //     
+    //     for (int i = 0; i < targetCount; i++)
+    //     {
+    //         int counter = 0;
+    //         bool distanceGood;
+    //         bool alreadyDecremented = false;
+    //         //  spawning object target
+    //         GameObject newTarget = Instantiate(food);
+    //         // make target child of env 
+    //         newTarget.transform.parent = envLocation;
+    //         // give random spawn location
+    //         // float x = r.Next(0, 5);
+    //         // float z = r.Next(0, 5);
+    //         Vector3 targetLocation = new Vector3(UnityEngine.Random.Range(-7f, 7f), 0, UnityEngine.Random.Range(-7f, 7f));
+    //         // check if distance is good
+    //         if (spawnedTargetList.Count != 0)
+    //         {
+    //             for (int k = 0; k < spawnedTargetList.Count; k++)
+    //             {
+    //                 if (counter < 10)
+    //                 {
+    //                     distanceGood = CheckOverlap(targetLocation, spawnedTargetList[k].transform.localPosition, RAY_RANGE);
+    //                     if (distanceGood == false)
+    //                     {
+    //                         targetLocation = new Vector3(UnityEngine.Random.Range(-20f, 20f), 0, UnityEngine.Random.Range(-10f, 10f));
+    //                         k--;
+    //                         alreadyDecremented = true;
+    //
+    //                     }
+    //                     
+    //                     distanceGood = CheckOverlap(targetLocation, transform.localPosition, RAY_RANGE);
+    //                     if (distanceGood == false)
+    //                     {
+    //                         targetLocation = new Vector3(UnityEngine.Random.Range(-20f, 20f), 0, UnityEngine.Random.Range(-10f, 10f));
+    //                         if (alreadyDecremented == false)
+    //                         {
+    //                             k--;
+    //                         }
+    //
+    //                     }
+    //
+    //                     counter++;
+    //                 }
+    //                 else
+    //                 {
+    //                     // exit the loop
+    //                     k = spawnedTargetList.Count;
+    //                 }
+    //             }
+    //         }
+    //         
+    //         // spawn in new location
+    //         newTarget.transform.localPosition = targetLocation;
+    //         spawnedTargetList.Add(newTarget);
+    //     } 
+    // }
 
-                        }
-                        
-                        distanceGood = CheckOverlap(targetLocation, transform.localPosition, RAY_RANGE);
-                        if (distanceGood == false)
-                        {
-                            targetLocation = new Vector3(UnityEngine.Random.Range(-7f, 7f), 0, UnityEngine.Random.Range(-7f, 7f));
-                            if (alreadyDecremented == false)
-                            {
-                                k--;
-                            }
-
-                        }
-
-                        counter++;
-                    }
-                    else
-                    {
-                        // exit the loop
-                        k = spawnedTargetList.Count;
-                    }
-                }
-            }
-            
-            // spawn in new location
-            newTarget.transform.localPosition = targetLocation;
-            spawnedTargetList.Add(newTarget);
-        } 
-    }
-
-    private void removeTarget(List<GameObject> targetsToDelete)
-    {
-        
-        foreach (var target in targetsToDelete)
-        {
-            Destroy(target.gameObject);
-        }
-        targetsToDelete.Clear();
-    }
+    // private void removeTarget(List<GameObject> targetsToDelete)
+    // {
+    //     
+    //     foreach (var target in targetsToDelete)
+    //     {
+    //         Destroy(target.gameObject);
+    //     }
+    //     targetsToDelete.Clear();
+    // }
 
     public bool CheckOverlap(Vector3 objAvoidOverlap, Vector3 existingObj, float minDistance)
     {
@@ -231,7 +225,7 @@ public class CastleAgent : Agent
                     Debug.LogError($"not init {castleArea.m_Team0AgentGroup}");
                 }
                 // m_AgentGroup.AddGroupReward(0.01f);
-                Debug.Log("Detected a 'FEMALE' object and rewarded the agent!");
+                // Debug.Log("Detected a 'FEMALE' object and rewarded the agent!");
             }
             
             else if (rayOutputResult.HasHit && rayOutputResult.HitGameObject.CompareTag("Male"))
@@ -239,7 +233,7 @@ public class CastleAgent : Agent
                 // Reward the agent for detecting a 'Female' object
                 castleArea.m_Team0AgentGroup.AddGroupReward(0.0001f);
                 // m_AgentGroup.AddGroupReward(0.01f);
-                Debug.Log("Detected a 'MALE' object and rewarded the agent!");
+                // Debug.Log("Detected a 'MALE' object and rewarded the agent!");
             }
 
             if (!rayOutputResult.HasHit)
@@ -376,7 +370,7 @@ public class CastleAgent : Agent
         
         
         // Try to subtract the necessary Bricks
-        if (CastleArea.CheckSubtractBricks(brickCostPerObject) && CastleArea.BricksTimeFunction())
+        if (CastleArea.CheckSubtractBricks(CastleArea.brickCostPerObject) && CastleArea.BricksTimeFunction())
         {
             canBuild = true;
             actionMask.SetActionEnabled(2, 3, false);
@@ -519,45 +513,45 @@ private void DropObject()
 
 
 // Function to create a new prop in the environment
-    public GameObject CreateProp(string propName, Vector3 position, Quaternion rotation)
-    {
-        // Check if the propName is valid
-        if (System.Array.IndexOf(propNames, propName) < 0)
-        {
-            Debug.LogError("Invalid prop name.");
-            return null;
-        }
-        
-        // Load the prefab from the Resources folder
-        GameObject propPrefab = Resources.Load<GameObject>($"Prefabs/{propName}");
-
-        if (propPrefab != null)
-        {
-            // Instantiate the prefab in the scene at the origin
-            Instantiate(propPrefab, Vector3.zero, Quaternion.identity);
-        }
-        else
-        {
-            Debug.LogError($"Could not find the prop '{propName}' in the Props folder.");
-        }
-
-        // Load the prefab from the Props folder
-        // GameObject propPrefab = Resources.Load<GameObject>($"Prefabs/{propName}");
-        // if (propPrefab == null)
-        // {
-        //     Debug.LogError($"Could not find the prop '{propName}' in the Props folder.");
-        //     return null;
-        // }
-
-        // Create the prop in the environment
-        GameObject newProp = Instantiate(propPrefab, position, rotation);
-
-        // Set the layer of the new prop to 'Pickable'
-        newProp.layer = LayerMask.NameToLayer("Pickable");
-
-        // Return the newly created GameObject
-        return newProp;
-    }
+    // public GameObject CreateProp(string propName, Vector3 position, Quaternion rotation)
+    // {
+    //     // Check if the propName is valid
+    //     if (System.Array.IndexOf(propNames, propName) < 0)
+    //     {
+    //         Debug.LogError("Invalid prop name.");
+    //         return null;
+    //     }
+    //     
+    //     // Load the prefab from the Resources folder
+    //     GameObject propPrefab = Resources.Load<GameObject>($"Prefabs/{propName}");
+    //
+    //     if (propPrefab != null)
+    //     {
+    //         // Instantiate the prefab in the scene at the origin
+    //         Instantiate(propPrefab, Vector3.zero, Quaternion.identity);
+    //     }
+    //     else
+    //     {
+    //         Debug.LogError($"Could not find the prop '{propName}' in the Props folder.");
+    //     }
+    //
+    //     // Load the prefab from the Props folder
+    //     // GameObject propPrefab = Resources.Load<GameObject>($"Prefabs/{propName}");
+    //     // if (propPrefab == null)
+    //     // {
+    //     //     Debug.LogError($"Could not find the prop '{propName}' in the Props folder.");
+    //     //     return null;
+    //     // }
+    //
+    //     // Create the prop in the environment
+    //     GameObject newProp = Instantiate(propPrefab, position, rotation);
+    //
+    //     // Set the layer of the new prop to 'Pickable'
+    //     newProp.layer = LayerMask.NameToLayer("Pickable");
+    //
+    //     // Return the newly created GameObject
+    //     return newProp;
+    // }
     
     // Example usage of CreateProp function
     public void CreateColumnProp()
@@ -572,33 +566,37 @@ private void DropObject()
         Quaternion rotation = transform.rotation;
 
         // Create a 'floor' prop at the calculated position and rotation
-        CreateProp("column_mini", position, rotation);
-        CastleArea.SubtractBricks(brickCostPerObject);
-        Debug.Log($"Take: {CastleArea.numBricks}");
+        castleArea.CreateProp("column_mini", position, rotation);
+        CastleArea.SubtractBricks(CastleArea.brickCostPerObject);
+        // Debug.Log($"Take: {CastleArea.numBricks}");
 
         // m_AgentGroup.AddGroupReward(0.001f);
         castleArea.m_Team0AgentGroup.AddGroupReward(0.0001f);
     }
     
-    public void CreateFoodProp()
-    {
-        for (int i = 0; i < targetCount; i++)
-        {
-            Vector3 randomLocalPosition =
-                new Vector3(UnityEngine.Random.Range(-25, 25), 0, UnityEngine.Random.Range(-7, 7));
-            randomLocalPosition.Scale(transform.localScale);
-
-            // Keep the rotation the same as the agent's rotation
-            Quaternion rotation = transform.rotation;
-
-            // Create a 'floor' prop at the calculated position and rotation
-            GameObject newTarget = CreateProp("Sphere", randomLocalPosition, rotation);
-            newTarget.transform.parent = envLocation;
-            spawnedTargetList.Add(newTarget);
-            Debug.Log("Created sphere");
-        }
-
-    }
+    // public void CreateFoodProp()
+    // {
+    //     if (spawnedTargetList.Count != 0)
+    //     {
+    //         removeTarget(spawnedTargetList);
+    //     }
+    //     for (int i = 0; i < targetCount; i++)
+    //     {
+    //         Vector3 randomLocalPosition =
+    //             new Vector3(UnityEngine.Random.Range(-25, 25), 0, UnityEngine.Random.Range(-7, 7));
+    //         // Keep the rotation the same as the agent's rotation
+    //         Quaternion rotation = transform.localRotation;
+    //
+    //         // Create a 'floor' prop at the calculated position and rotation
+    //         GameObject newTarget = CreateProp("SphereF", randomLocalPosition, rotation);
+    //         newTarget.transform.localPosition.Scale(transform.localScale);
+    //         castleArea.RandomlyPlaceObject(newTarget, 20, 10);
+    //         newTarget.transform.parent = envLocation;
+    //         spawnedTargetList.Add(newTarget);
+    //         Debug.Log("Created sphere");
+    //     }
+    //
+    // }
     
     // Function to destroy the object
     private void DestroyObject()
@@ -606,8 +604,8 @@ private void DropObject()
         if (objectToDestroy != null)
         {
             // Add the brick cost to the Bricks variable
-            CastleArea.AddBricks(brickCostPerObject);
-            Debug.Log($"Add: {CastleArea.numBricks}");
+            CastleArea.AddBricks(CastleArea.brickCostPerObject);
+            // Debug.Log($"Add: {CastleArea.numBricks}");
             // Destroy the game object
             Destroy(objectToDestroy);
 
@@ -662,7 +660,7 @@ private void DropObject()
                         // No movement by default
                         break;
                 }
-                Debug.Log($"MOVE: { moveVector}");
+                // Debug.Log($"MOVE: { moveVector}");
 
                 // Apply movement
                 rb.MovePosition(transform.position + moveVector);
@@ -700,7 +698,7 @@ private void DropObject()
 
                 // Apply the constrained rotation to the Rigidbody
                 rb.MoveRotation(newRotation);
-                Debug.Log($"ROTATION: {newRotation}");
+                // Debug.Log($"ROTATION: {newRotation}");
 
                 // transform.Rotate(0f, rotationAngle, 0f, Space.Self);
             }
@@ -712,22 +710,23 @@ private void DropObject()
             bool noBuildAction;
             if (discreteAction == 0)
             {
-                Debug.Log("ACTION: PICKUP");
+                // Debug.Log("ACTION: PICKUP");
                 pickUpAction = true;
             } else { pickUpAction = false;}
             if (discreteAction == 1)
             {
-                Debug.Log("ACTION: DROP");
+                // Debug.Log("ACTION: DROP");
                 dropAction = true;
             } else { dropAction = false;}
             if (discreteAction == 2)
             {
-                Debug.Log("ACTION: NOTHING");
+                // Debug.Log("ACTION: NOTHING");
+                castleArea.m_Team0AgentGroup.AddGroupReward(penaltyForNothingAction);
                 noBuildAction = true;
             } else { noBuildAction = false;}
             if (discreteAction == 3)
             {
-                Debug.Log("ACTION: CREATE");
+                // Debug.Log("ACTION: CREATE");
                 CreateColumnProp();
             }
 
@@ -776,17 +775,21 @@ private void DropObject()
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other.gameObject.tag == "Sphere")
+        // Debug.Log("ENTERED SPHEREF");
+        if (other.gameObject.tag == "SphereF")
         {
+            Debug.Log("Tagged SphereF");
             
-            spawnedTargetList.Remove(other.gameObject);
+            castleArea.spawnedTargetListF.Remove(other.gameObject);
             Destroy(other.gameObject);
+            // Debug.Log($"NameAgent : {envLocation.gameObject.name}");
+            castleArea.CreateFoodPropFemale(envLocation);
             castleArea.m_Team0AgentGroup.AddGroupReward(0.1f);
             
-            if (spawnedTargetList.Count == 0)
+            if (castleArea.spawnedTargetListF.Count == 0)
             {
                 envMaterial.color = Color.green;
-                castleArea.m_Team0AgentGroup.AddGroupReward(0.05f);
+                castleArea.m_Team0AgentGroup.AddGroupReward(0.5f);
                 // removeTarget(spawnedTargetList);
                 castleArea.m_Team0AgentGroup.EndGroupEpisode();
             }
@@ -798,7 +801,7 @@ private void DropObject()
             
             castleArea.m_Team0AgentGroup.AddGroupReward(-0.1f);
             envMaterial.color = Color.yellow;
-            Debug.Log("Caught male");
+            // Debug.Log("Caught male");
             castleArea.ResetAgent(this.gameObject);
         }
         

@@ -15,7 +15,7 @@ public class MaleAgentV2 : Agent
     [SerializeField] private Transform buildTransform;
     // [SerializeField] private List<GameObject> spawnedBuildList = new List<GameObject>();
     
-    private const float brickCostPerObject = 1000f;
+    private float penaltyForNothingAction = -0.00001f;
     private string[] propNames = { "floor", "floorStairs", "column_mini" }; // List of props
     
     // private float RAY_RANGE = 5f;
@@ -52,7 +52,7 @@ public class MaleAgentV2 : Agent
     
     // env variables
     private CastleArea castleArea;
-    [SerializeField] private Transform envLocation;
+    private Transform envLocation;
     Material envMaterial;
     public GameObject env;
 
@@ -67,6 +67,7 @@ public class MaleAgentV2 : Agent
         //     m_AgentGroup.RegisterAgent(agent);
         //     castleArea.RandomlyPlaceObject(agent.gameObject, 10f, 3);
         // }
+        envLocation = transform.parent.gameObject.transform;
         rayPerceptionSensor = GetComponent<RayPerceptionSensorComponent3D>();
 
         if (rayPerceptionSensor == null)
@@ -207,7 +208,7 @@ public class MaleAgentV2 : Agent
                 dispStr = dispStr + "GameObject name: " + goHit.name + "\r\n";
                 dispStr = dispStr + "Hit distance of Ray: " + rayHitDistance + "\r\n";
                 dispStr = dispStr + "GameObject tag: " + goHit.tag + "\r\n";
-                Debug.Log(dispStr);
+                // Debug.Log(dispStr);
             }
         }
     }
@@ -221,13 +222,13 @@ public class MaleAgentV2 : Agent
         for (int i = 0; i < lengthOfRayOutputs; i++)
         {
             var rayOutputResult = rayOutputs[i];
-            Debug.Log($"Ray hit object: {rayOutputResult.HitTaggedObject}");
+            // Debug.Log($"Ray hit object: {rayOutputResult.HitTaggedObject}");
     
     
             // Add whether a hit was detected (1 if true, 0 if false)
             if (rayOutputResult.HasHit)
             {
-                Debug.Log($"HASHIT: {rayOutputResult.HitGameObject.tag}");
+                // Debug.Log($"HASHIT: {rayOutputResult.HitGameObject.tag}");
                 sensor.AddObservation(1);
                 // Add the distance to the detected object as an observation
                 sensor.AddObservation(rayOutputResult.HitFraction);
@@ -243,7 +244,7 @@ public class MaleAgentV2 : Agent
                 sensor.AddObservation(100);
             }
             
-            Debug.Log($"HAS HIT: {rayOutputResult.HasHit}");
+            // Debug.Log($"HAS HIT: {rayOutputResult.HasHit}");
     
             // Check if the detected object has the 'Female' tag and reward the agent
             if (rayOutputResult.HasHit && rayOutputResult.HitGameObject.gameObject.CompareTag("Female"))
@@ -252,7 +253,7 @@ public class MaleAgentV2 : Agent
                 castleArea.m_Team1AgentGroup.AddGroupReward(0.0001f);
                 // m_AgentGroup.AddGroupReward(0.01f);
                 
-                Debug.Log("Detected a 'Female' object and rewarded the agent!");
+                // Debug.Log("Detected a 'Female' object and rewarded the agent!");
                 
                 // Penalize the detected 'Female' agent
                 GameObject femaleCollider = rayOutputResult.HitGameObject;
@@ -261,7 +262,7 @@ public class MaleAgentV2 : Agent
                 {
                     sensor.AddObservation(femaleAgent.transform.position);
                     castleArea.m_Team0AgentGroup.AddGroupReward(-0.0001f);
-                    Debug.Log("Female agent detected by a male agent and penalized!");
+                    // Debug.Log("Female agent detected by a male agent and penalized!");
                 }
             }
             else
@@ -390,12 +391,12 @@ private void DrawWireCube(Vector3 position, Vector3 size, Color color)
             // Mask the action if the movement would result in a collision
             if (WouldCollide(moveVector))
             {
-                Debug.Log($"COLLIDES");
+                // Debug.Log($"COLLIDES");
                 actionMask.SetActionEnabled(0, moveDirection, false); // Assuming move actions are indexed at branch 0
             }
             else
             {
-                Debug.Log($"DOES NOT COLLIDE");
+                // Debug.Log($"DOES NOT COLLIDE");
                 actionMask.SetActionEnabled(0, moveDirection, true);
             }
         }
@@ -437,7 +438,7 @@ private void DrawWireCube(Vector3 position, Vector3 size, Color color)
         
         
         // Try to subtract the necessary Bricks
-        if (CastleArea.CheckSubtractBricks(brickCostPerObject) && CastleArea.BricksTimeFunction())
+        if (CastleArea.CheckSubtractBricks(CastleArea.brickCostPerObject) && CastleArea.BricksTimeFunction())
         {
             canBuild = true;
             actionMask.SetActionEnabled(2, 3, true);
@@ -467,7 +468,7 @@ private void DrawWireCube(Vector3 position, Vector3 size, Color color)
     private void OnCollisionEnter(Collision collision)
     {
         // Check if the collided object is in the "Pickable" layer
-        Debug.Log($"COLLI: {collision}");
+        // Debug.Log($"COLLI: {collision}");
         if (collision.gameObject.layer == LayerMask.NameToLayer("Pickable"))
         {
             canPickUp = true;
@@ -583,7 +584,7 @@ private void DropObject()
     public GameObject CreateProp(string propName, Vector3 position, Quaternion rotation)
     {
         
-        Debug.Log($"CAN BUILD: {canBuild}");
+        // Debug.Log($"CAN BUILD: {canBuild}");
         // Check if the propName is valid
         if (System.Array.IndexOf(propNames, propName) < 0)
         {
@@ -635,8 +636,8 @@ private void DropObject()
 
         // Create a 'floor' prop at the calculated position and rotation
         CreateProp("column_mini", position, rotation);
-        CastleArea.SubtractBricks(brickCostPerObject);
-        Debug.Log($"Take: {CastleArea.numBricks}");
+        CastleArea.SubtractBricks(CastleArea.brickCostPerObject);
+        // Debug.Log($"Take: {CastleArea.numBricks}");
 
         // AddReward(0.001f);
         // if the team scores a goal
@@ -649,8 +650,8 @@ private void DropObject()
         if (objectToDestroy != null)
         {
             // Add the brick cost to the Bricks variable
-            CastleArea.AddBricks(brickCostPerObject);
-            Debug.Log($"Add: {CastleArea.numBricks}");
+            CastleArea.AddBricks(CastleArea.brickCostPerObject);
+            // Debug.Log($"Add: {CastleArea.numBricks}");
             // Destroy the game object
             Destroy(objectToDestroy);
 
@@ -695,23 +696,23 @@ private void DropObject()
                 {
                     case 0:
                         // No movement
-                        Debug.Log($"STOP: { moveStep}");
+                        // Debug.Log($"STOP: { moveStep}");
                         break;
                     case 1:
                         // Move forward
                         moveVector = transform.forward * moveStep;
-                        Debug.Log($"FORWARD: { moveVector}");
+                        // Debug.Log($"FORWARD: { moveVector}");
                         break;
                     case 2:
                         // Move backward
                         moveVector = -transform.forward * moveStep;
-                        Debug.Log($"BACK: { moveVector}");
+                        // Debug.Log($"BACK: { moveVector}");
                         break;
                     default:
                         // No movement by default
                         break;
                 }
-                Debug.Log($"MOVE: { moveVector}");
+                // Debug.Log($"MOVE: { moveVector}");
 
                 // Apply movement
                 rb.MovePosition(transform.position + moveVector);
@@ -749,7 +750,7 @@ private void DropObject()
 
                 // Apply the constrained rotation to the Rigidbody
                 rb.MoveRotation(newRotation);
-                Debug.Log($"ROTATION: {newRotation}");
+                // Debug.Log($"ROTATION: {newRotation}");
 
                 // transform.Rotate(0f, rotationAngle, 0f, Space.Self);
             }
@@ -761,22 +762,23 @@ private void DropObject()
             bool noBuildAction;
             if (discreteAction == 0)
             {   
-                Debug.Log("ACTION: PICKUP");
+                // Debug.Log("ACTION: PICKUP");
                 pickUpAction = true;
             } else { pickUpAction = false;}
             if (discreteAction == 1)
             {
-                Debug.Log("ACTION: DROP");
+                // Debug.Log("ACTION: DROP");
                 dropAction = true;
             } else { dropAction = false;}
             if (discreteAction == 2)
             {
-                Debug.Log("ACTION: NOTHING");
+                // Debug.Log("ACTION: NOTHING");
+                castleArea.m_Team1AgentGroup.AddGroupReward(penaltyForNothingAction);
                 noBuildAction = true;
             } else { noBuildAction = false;}
             if (discreteAction == 3)
             {
-                Debug.Log("ACTION: CREATE");
+                // Debug.Log("ACTION: CREATE");
                 // Debug.Log("SELECTED BUILD ACTION.");
                 CreateColumnProp();
             }
@@ -845,13 +847,32 @@ private void DropObject()
         //     AddReward(-.001f);
         //     agentArea.UpdateScore(GetCumulativeReward());
         // }
+        // Debug.Log("ENTERED SPHEREM");
+        if (other.gameObject.tag == "SphereM")
+        {
+            // Debug.Log("Tagged SphereM");
+            
+            castleArea.spawnedTargetListM.Remove(other.gameObject);
+            Destroy(other.gameObject);
+            castleArea.CreateFoodPropMale(envLocation);
+            castleArea.m_Team0AgentGroup.AddGroupReward(0.1f);
+            
+            if (castleArea.spawnedTargetListM.Count == 0)
+            {
+                envMaterial.color = Color.green;
+                castleArea.m_Team0AgentGroup.AddGroupReward(0.5f);
+                // removeTarget(spawnedTargetList);
+                castleArea.m_Team0AgentGroup.EndGroupEpisode();
+            }
+            
+        }
         
         if (other.gameObject.tag =="Female")
         {
             
             castleArea.m_Team1AgentGroup.AddGroupReward(-0.1f);
             
-            Debug.Log("Caught female");
+            // Debug.Log("Caught female");
             castleArea.ResetAgent(this.gameObject);
             
         }

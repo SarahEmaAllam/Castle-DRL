@@ -14,6 +14,9 @@ TagManager:
   - Gate
   - Floor
   - Stairs
+  - SphereM
+  - SphereF
+  - Environment
   layers:
   - Default
   - TransparentFX

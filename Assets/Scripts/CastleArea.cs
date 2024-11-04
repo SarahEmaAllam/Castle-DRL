@@ -4,10 +4,14 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System;
+using System.IO;
+using UnityEditor;
+using UnityEngine;
 
 public class CastleArea : MonoBehaviour
 {
-    [Header("Pig Area Objects")]
+    [Header("Area Objects")]
+    // public GameObject env;
     public GameObject CastleAgent;
     public GameObject MaleAgent;
     public GameObject ground;
@@ -16,14 +20,18 @@ public class CastleArea : MonoBehaviour
     public TextMeshPro scoreText;
     private int m_ResetTimer;
     public int MaxEnvironmentSteps = 1000;
+    private int MaxTraining = 5000;
+    private int rangeZ = 8;
     
     [Header("Prefabs")]
     public GameObject agentPrefab;
     public GameObject wallPrefab;
 
     // [HideInInspector]
+    public int targetCount = 2;
     public static float numBricks = 0f;
     public static float maxBricks = 0f;
+    public const float brickCostPerObject = 10000f;
     [HideInInspector]
     public static int numAgents;
     [HideInInspector]
@@ -67,6 +75,9 @@ public class CastleArea : MonoBehaviour
     public SimpleMultiAgentGroup m_Team1AgentGroup;
     public List<FemaleInfo> Team0Players;
     public List<MaleInfo> Team1Players;
+    [SerializeField] public List<GameObject> spawnedTargetListF = new List<GameObject>();
+    [SerializeField] public List<GameObject> spawnedTargetListM = new List<GameObject>();
+    private string[] propNames = { "floor", "floorStairs", "column_mini", "Sphere", "SphereF", "SphereM" }; // List of props
 
     // A list of (position, radius) tuples of occupied spots in the area
     private List<Tuple<Vector3, float>> occupiedPositions;
@@ -118,6 +129,18 @@ public class CastleArea : MonoBehaviour
         occupiedPositions = new List<Tuple<Vector3, float>>();
         ResetAgents();
         ResetResources();
+        // if (spawnedTargetListM.Count != 0)
+        // {
+        //     removeTarget(spawnedTargetListM);
+        // }
+        //
+        // if (spawnedTargetListF.Count != 0)
+        // {
+        //     removeTarget(spawnedTargetListF);
+        // }
+        CreateFoodPropFemale(transform);
+        CreateFoodPropMale(transform);
+        
 
         // ResetWalls();
     }
@@ -126,7 +149,7 @@ public class CastleArea : MonoBehaviour
     {
         numBricks = 0;
         maxBricks = 0;
-        m_ResetTimer = 0;
+        // m_ResetTimer = 0;
         // remove all agent-built prefabs as well
 
     }
@@ -136,16 +159,23 @@ public class CastleArea : MonoBehaviour
         if (!m_Initialized) return;
         //RESET SCENE IF WE MaxEnvironmentSteps
         m_ResetTimer += 1;
-        if (m_ResetTimer % 100 == 0)
+        if (m_ResetTimer % 300 == 0)
         {
             m_Team0AgentGroup.EndGroupEpisode();
             m_Team1AgentGroup.EndGroupEpisode();
         }
         
-        if (m_ResetTimer >= MaxEnvironmentSteps)
+        if (m_ResetTimer % MaxEnvironmentSteps == 0)
         {
             ResetArea();
         }
+        
+        if (m_ResetTimer % MaxTraining == 0)
+        {
+            int stage = m_ResetTimer / MaxTraining;
+            SaveAsPrefab(stage);
+        }
+        
     }
     
     // Update is called once per frame
@@ -197,8 +227,8 @@ public class CastleArea : MonoBehaviour
     {
         if ( maxBricks < 10000f)
         {
-            numBricks += 0.01f;
-            maxBricks += 0.01f;
+            numBricks += 0.0001f;
+            maxBricks += 0.0001f;
             return true;
         }
         else
@@ -240,7 +270,7 @@ public class CastleArea : MonoBehaviour
     public void ResetAgent(GameObject agent)
     {
         // Reset location and rotation
-        RandomlyPlaceObject(agent, 20, 10);
+        RandomlyPlaceObject(agent, 20, 10, transform);
     }
 
     /// <summary>
@@ -263,7 +293,7 @@ public class CastleArea : MonoBehaviour
         {
             // Create a new wall instance and place it randomly
             GameObject wallInstance = Instantiate(wallPrefab, transform);
-            RandomlyPlaceObject(wallInstance, 20, 10);
+            RandomlyPlaceObject(wallInstance, 20, 10, transform);
             spawnedWalls.Add(wallInstance);
         }
     }
@@ -288,6 +318,117 @@ public class CastleArea : MonoBehaviour
 
     }
     
+    public GameObject CreateProp(string propName, Vector3 position, Quaternion rotation)
+    {
+        // Check if the propName is valid
+        if (System.Array.IndexOf(propNames, propName) < 0)
+        {
+            Debug.LogError("Invalid prop name.");
+            return null;
+        }
+        
+        // Load the prefab from the Resources folder
+        GameObject propPrefab = Resources.Load<GameObject>($"Prefabs/{propName}");
+
+        if (propPrefab != null)
+        {
+            // Instantiate the prefab in the scene at the origin
+            Instantiate(propPrefab, Vector3.zero, Quaternion.identity);
+        }
+        else
+        {
+            Debug.LogError($"Could not find the prop '{propName}' in the Props folder.");
+        }
+
+        // Load the prefab from the Props folder
+        // GameObject propPrefab = Resources.Load<GameObject>($"Prefabs/{propName}");
+        // if (propPrefab == null)
+        // {
+        //     Debug.LogError($"Could not find the prop '{propName}' in the Props folder.");
+        //     return null;
+        // }
+
+        // Create the prop in the environment
+        GameObject newProp = Instantiate(propPrefab, position, rotation);
+
+        // Set the layer of the new prop to 
+        if (propName != "SphereF" && propName != "SphereM")
+        {
+            newProp.layer = LayerMask.NameToLayer("Pickable");   
+        }
+
+        // Return the newly created GameObject
+        return newProp;
+    }
+    
+    private void removeTarget(List<GameObject> targetsToDelete)
+    {
+        
+        foreach (var target in targetsToDelete)
+        {
+            Destroy(target.gameObject);
+        }
+        targetsToDelete.Clear();
+    }
+    
+    public void CreateFoodPropMale(Transform envLocation)
+    {
+        // if (spawnedTargetListM.Count != 0)
+        // {
+        //     removeTarget(spawnedTargetListM);
+        // }
+        int numberOfNewTargetsNeeded = targetCount - spawnedTargetListM.Count;
+        for (int i = 0 ; i < numberOfNewTargetsNeeded; i++)
+        {
+            // Debug.Log($"Create ball M no: {i} to {targetCount}");
+            Vector3 randomLocalPosition =
+                new Vector3(UnityEngine.Random.Range(-25, 25), 0, UnityEngine.Random.Range(-7, 7));
+            // Keep the rotation the same as the agent's rotation
+            Quaternion rotation = transform.localRotation;
+
+            // Create a 'floor' prop at the calculated position and rotation
+            GameObject newTarget = CreateProp("SphereM", randomLocalPosition, rotation);
+            
+            newTarget.transform.SetParent(envLocation, false);
+            Debug.Log($"envlocation: {envLocation.gameObject.name}");
+            RandomlyPlaceObject(newTarget, 23, 20, transform);
+            // newTarget.transform.parent = envLocation;
+            newTarget.transform.localPosition.Scale(transform.localScale);
+            spawnedTargetListM.Add(newTarget);
+            // Debug.Log("Created sphere");
+        }
+
+    }
+
+    
+    public void CreateFoodPropFemale(Transform envLocation)
+    {
+        // if (spawnedTargetListF.Count != 0)
+        // {
+        //     removeTarget(spawnedTargetListF);
+        // }
+        // Debug.Log($"Name : {envLocation.gameObject.name}");
+        int numberOfNewTargetsNeeded = targetCount - spawnedTargetListF.Count;
+        for (int i = 0 ; i < numberOfNewTargetsNeeded; i++)
+        {
+            // Debug.Log($"Create ball F no: {i} to {targetCount}");
+            Vector3 randomLocalPosition =
+                new Vector3(UnityEngine.Random.Range(-25, 25), 0, UnityEngine.Random.Range(-7, 7));
+            // Keep the rotation the same as the agent's rotation
+            Quaternion rotation = transform.localRotation;
+
+            // Create a 'floor' prop at the calculated position and rotation
+            GameObject newTarget = CreateProp("SphereF", randomLocalPosition, rotation);
+            newTarget.transform.SetParent(envLocation, false);
+            RandomlyPlaceObject(newTarget, 23, 20, transform);
+            
+            newTarget.transform.localPosition.Scale(transform.localScale);
+            spawnedTargetListF.Add(newTarget);
+            // Debug.Log("Created sphere");
+        }
+
+    }
+    
         // spawnedAgents = new List<GameObject>();
         //
         // for (int i = 0; i < numAgents; i++)
@@ -305,44 +446,95 @@ public class CastleArea : MonoBehaviour
     /// <param name="objectToPlace">The object to be randomly placed</param>
     /// <param name="range">The range in x and z to choose random points within.</param>
     /// <param name="maxAttempts">Number of times to attempt placement</param>
-    public void RandomlyPlaceObject(GameObject objectToPlace, float range, float maxAttempts)
+     public void RandomlyPlaceObject(GameObject objectToPlace, float range, float maxAttempts, Transform envTransform)
     {
         // Temporarily disable collision
-        objectToPlace.GetComponent<Collider>().enabled = false;
+        Collider objCollider = objectToPlace.GetComponent<Collider>();
+        bool colliderWasEnabled = objCollider.enabled;
+        objCollider.enabled = false;
 
         // Calculate test radius 10% larger than the collider extents
         float testRadius = GetColliderRadius(objectToPlace) * 1.1f;
 
-        // Set a random rotation
-        objectToPlace.transform.rotation = Quaternion.Euler(new Vector3(0f, UnityEngine.Random.Range(0f, 360f), 0f));
+        // Set a random rotation (local rotation relative to Env)
+        objectToPlace.transform.localRotation = Quaternion.Euler(
+            new Vector3(0f, UnityEngine.Random.Range(0f, 360f), 0f)
+        );
 
         // Make several attempts at randomly placing the object
         int attempt = 1;
         while (attempt <= maxAttempts)
         {
-            Vector3 randomLocalPosition = new Vector3(UnityEngine.Random.Range(-range, range), 0, UnityEngine.Random.Range(-range, range));
-            randomLocalPosition.Scale(transform.localScale);
+            // Generate random local position within the range
+            Vector3 randomLocalPosition = new Vector3(
+                UnityEngine.Random.Range(-range, range),
+                0,
+                UnityEngine.Random.Range(-rangeZ, rangeZ) // Ensure rangeZ is defined or use range if appropriate
+            );
+            
 
-            //if (!Physics.CheckSphere(transform.position + randomLocalPosition, testRadius, notGroundLayerMask))
-            if (CheckIfPositionIsOpen(transform.position + randomLocalPosition, testRadius))
+            // Check if the position is open (relative to Env's local position)
+            if (CheckIfPositionIsOpen(envTransform.localPosition + randomLocalPosition, testRadius, envTransform))
             {
+                // Set the object's local position relative to the Env
                 objectToPlace.transform.localPosition = randomLocalPosition;
-                occupiedPositions.Add(new Tuple<Vector3, float>(objectToPlace.transform.position, testRadius));
-                Debug.Log($"occupiedPosition: {transform.position + randomLocalPosition}");
+
+                // Record the occupied position
+                occupiedPositions.Add(new Tuple<Vector3, float>(objectToPlace.transform.localPosition, testRadius));
+                // Debug.Log($"Occupied Position (Local): {objectToPlace.transform.localPosition}");
                 break;
             }
             else if (attempt == maxAttempts)
             {
-                Debug.LogError(string.Format("{0} couldn't be placed randomly after {1} attempts.", objectToPlace.name, maxAttempts));
+                Debug.LogError($"{objectToPlace.name} couldn't be placed randomly after {maxAttempts} attempts.");
                 break;
             }
 
             attempt++;
         }
 
-        // Enable collision
-        objectToPlace.GetComponent<Collider>().enabled = true;
+        // Re-enable collision
+        objCollider.enabled = colliderWasEnabled;
     }
+
+    // public void RandomlyPlaceObject(GameObject objectToPlace, float range, float maxAttempts, Transform envLocation)
+    // {
+    //     // Temporarily disable collision
+    //     objectToPlace.GetComponent<Collider>().enabled = false;
+    //
+    //     // Calculate test radius 10% larger than the collider extents
+    //     float testRadius = GetColliderRadius(objectToPlace) * 1.1f;
+    //
+    //     // Set a random rotation
+    //     objectToPlace.transform.rotation = Quaternion.Euler(new Vector3(0f, UnityEngine.Random.Range(0f, 360f), 0f));
+    //
+    //     // Make several attempts at randomly placing the object
+    //     int attempt = 1;
+    //     while (attempt <= maxAttempts)
+    //     {
+    //         Vector3 randomLocalPosition = new Vector3(UnityEngine.Random.Range(-range, range), 0, UnityEngine.Random.Range(-rangeZ, rangeZ));
+    //         // randomLocalPosition.Scale(transform.localScale);
+    //
+    //         //if (!Physics.CheckSphere(transform.position + randomLocalPosition, testRadius, notGroundLayerMask))
+    //         if (CheckIfPositionIsOpen(transform.localPosition + randomLocalPosition, testRadius))
+    //         {
+    //             objectToPlace.transform.localPosition = randomLocalPosition;
+    //             occupiedPositions.Add(new Tuple<Vector3, float>(objectToPlace.transform.localPosition, testRadius));
+    //             Debug.Log($"occupiedPosition: {transform.localPosition + randomLocalPosition}");
+    //             break;
+    //         }
+    //         else if (attempt == maxAttempts)
+    //         {
+    //             Debug.LogError(string.Format("{0} couldn't be placed randomly after {1} attempts.", objectToPlace.name, maxAttempts));
+    //             break;
+    //         }
+    //
+    //         attempt++;
+    //     }
+    //
+    //     // Enable collision
+    //     objectToPlace.GetComponent<Collider>().enabled = true;
+    // }
         
     /// <summary>
     /// Gets a local space radius that draws a circle on the X-Z plane around the boundary of the collider
@@ -373,20 +565,76 @@ public class CastleArea : MonoBehaviour
     /// <param name="testPosition">The world position to test</param>
     /// <param name="testRadius">The radius to test</param>
     /// <returns><c>true</c> if the position is open</returns>
-    private bool CheckIfPositionIsOpen(Vector3 testPosition, float testRadius)
+    // private bool CheckIfPositionIsOpen(Vector3 testPosition, float testRadius)
+    // {
+    //     foreach (Tuple<Vector3, float> occupied in occupiedPositions)
+    //     {
+    //         Vector3 occupiedPosition = occupied.Item1;
+    //         float occupiedRadius = occupied.Item2;
+    //         Debug.Log($"new location: {testPosition}, radius: {occupiedRadius} ");
+    //         if (Vector3.Distance(testPosition, occupiedPosition) - occupiedRadius <= testRadius)
+    //         {
+    //             return false;
+    //         }
+    //     }
+    //
+    //     return true;
+    // }
+    
+    private bool CheckIfPositionIsOpen(Vector3 localPosition, float testRadius, Transform envTransform)
     {
+        // Convert the test local position to world position
+        Vector3 testWorldPosition = envTransform.TransformPoint(localPosition);
+
+        // Iterate through all occupied positions
         foreach (Tuple<Vector3, float> occupied in occupiedPositions)
         {
-            Vector3 occupiedPosition = occupied.Item1;
+            Vector3 occupiedLocalPosition = occupied.Item1;
             float occupiedRadius = occupied.Item2;
-            Debug.Log($"new location: {testPosition}, radius: {occupiedRadius} ");
-            if (Vector3.Distance(testPosition, occupiedPosition) - occupiedRadius <= testRadius)
+
+            // Convert the occupied local position to world position
+            Vector3 occupiedWorldPosition = envTransform.TransformPoint(occupiedLocalPosition);
+
+            // Calculate the distance between the test position and the occupied position
+            float distance = Vector3.Distance(testWorldPosition, occupiedWorldPosition);
+
+            // Check if the test position overlaps with the occupied position
+            if (distance - occupiedRadius <= testRadius)
             {
+                // The position is not open (it overlaps with an occupied position)
                 return false;
             }
         }
 
+        // If no overlaps were found, the position is open
         return true;
     }
+    
+    public void SaveAsPrefab(int stage)
+    {
+        // Path where the prefab will be saved
+        string prefabPath = $"Assets/Resources/EnvTrained_{stage}.prefab";
+        // Create the prefab from the Env GameObject
+        PrefabUtility.SaveAsPrefabAsset(this.gameObject, prefabPath);
+        
+        Debug.Log("Environment saved as a prefab at: " + prefabPath);
+    }
+    // public void LoadEnvironment(string filePath)
+    //     {
+    //         if (File.Exists(filePath))
+    //         {
+    //             string json = File.ReadAllText(filePath);
+    //             TransformData transformData = JsonUtility.FromJson<TransformData>(json);
+    //
+    //             env.transform.position = transformData.position;
+    //             env.transform.rotation = transformData.rotation;
+    //             env.transform.localScale = transformData.scale;
+    //
+    //             Debug.Log("Environment loaded from: " + filePath);
+    //         }
+    //         else
+    //         {
+    //             Debug.LogWarning("Save file not found: " + filePath);
+    //         }
     
 }
