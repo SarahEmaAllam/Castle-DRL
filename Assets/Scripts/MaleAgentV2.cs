@@ -16,7 +16,8 @@ public class MaleAgentV2 : Agent
     // [SerializeField] private List<GameObject> spawnedBuildList = new List<GameObject>();
     
     private float penaltyForNothingAction = -0.00001f;
-    private string[] propNames = { "floor", "floorStairs", "column_mini" }; // List of props
+    private string[] propNames = { "floor", "floorStairs", "column_mini", "floor Variant",
+                                    "floor_stairs Variant","wallPaint_half_mini","wallPaint_flat Variant" }; // List of props
     
     // private float RAY_RANGE = 5f;
     
@@ -438,28 +439,51 @@ private void DrawWireCube(Vector3 position, Vector3 size, Color color)
         
         
         // Try to subtract the necessary Bricks
+        Debug.Log($"Bricks: {CastleArea.numBricks} , Time: {CastleArea.BricksTimeFunction()}" );
         if (CastleArea.CheckSubtractBricks(CastleArea.brickCostPerObject) && CastleArea.BricksTimeFunction())
         {
             canBuild = true;
-            actionMask.SetActionEnabled(2, 3, true);
             // Debug.Log("CAN BUILD==================");
+            // Now, set action masks for branch 3 (propAction)
+            // First, unmask all propActions
+            actionMask.SetActionEnabled(3, 1, true); // 'column_mini'
+            actionMask.SetActionEnabled(3, 2, true); // 'floor Variant'
+            actionMask.SetActionEnabled(3, 3, true); // 'floor_stairs Variant'
+            actionMask.SetActionEnabled(3, 4, true); // 'wallPaint_half_mini'
+            actionMask.SetActionEnabled(3, 5, true); // 'wallPaint_flat Variant'
+            
+            // Special case for 'floor_stairs Variant'
+            if (CheckIfFloorBeneath())
+            {
+                // Mask the action to create 'floor_stairs Variant' (propAction index 2)
+                actionMask.SetActionEnabled(3, 2, false);
+            }
+            else
+            {
+                actionMask.SetActionEnabled(3, 3, false);
+            }
         }
         else
         {
             canBuild = false;
-            actionMask.SetActionEnabled(2, 3, false);
+            // Mask all actions in branch 3
+            for (int i = 1; i < 6; i++)
+            {
+                actionMask.SetActionEnabled(3, i, false);
+            }
+            
         }
         
         // destroy pickable object
         if (objectToDestroy == null)
         {
             // Mask the destroy action (assuming the destroy action index is 4)
-            actionMask.SetActionEnabled(2, 4, false);
+            actionMask.SetActionEnabled(2, 3, false);
         }
         else
         {
             // Unmask the destroy action if there is an object to destroy
-            actionMask.SetActionEnabled(2, 4, true);
+            actionMask.SetActionEnabled(2, 3, true);
         }
     }
     
@@ -579,51 +603,75 @@ private void DropObject()
     }
 }
 
+    // Function to handle prop creation based on propAction
+    void CreatePropAction(int propAction)
+    {
+        Debug.Log($"CREATING PROP {propAction}");
+        string propName = "";
+        switch (propAction)
+        {
+            case 1:
+                propName = "column_mini";
+                CreatePropColumn();
+                break;
+            case 2:
+                propName = "floor Variant";
+                CreatePropFloor();
+                break;
+            case 3:
+                propName = "floor_stairs Variant";
+                CreatePropStairs();
+                break;
+            case 4:
+                propName = "wallPaint_half_mini";
+                CreatePropWall();
+                break;
+            case 5:
+                propName = "wallPaint_flat Variant";
+                CreatePropArch();
+                break;
+            default:
+                Debug.LogError("Invalid prop action");
+                return;
+        }
 
-// Function to create a new prop in the environment
+    }
+
+    // Function to create a new prop in the environment
     public GameObject CreateProp(string propName, Vector3 position, Quaternion rotation)
     {
-        
-        // Debug.Log($"CAN BUILD: {canBuild}");
         // Check if the propName is valid
         if (System.Array.IndexOf(propNames, propName) < 0)
         {
             Debug.LogError("Invalid prop name.");
             return null;
         }
-        
+    
         // Load the prefab from the Resources folder
         GameObject propPrefab = Resources.Load<GameObject>($"Prefabs/{propName}");
 
-        if (propPrefab != null)
+        if (propPrefab == null)
         {
-            // Instantiate the prefab in the scene at the origin
-            Instantiate(propPrefab, Vector3.zero, Quaternion.identity);
-        }
-        else
-        {
-            Debug.LogError($"Could not find the prop '{propName}' in the Props folder.");
+            Debug.LogError($"Could not find the prop '{propName}' in the Prefabs folder.");
+            return null;
         }
 
-        // Load the prefab from the Props folder
-        // GameObject propPrefab = Resources.Load<GameObject>($"Prefabs/{propName}");
-        // if (propPrefab == null)
-        // {
-        //     Debug.LogError($"Could not find the prop '{propName}' in the Props folder.");
-        //     return null;
-        // }
-
-        // Create the prop in the environment
+        // Instantiate the prefab at the desired position and rotation
         GameObject newProp = Instantiate(propPrefab, position, rotation);
+
+        // Set the scale of the new prop to (1, 1, 1)
+        newProp.transform.localScale = Vector3.one;
 
         // Set the layer of the new prop to 'Pickable'
         newProp.layer = LayerMask.NameToLayer("Pickable");
+
         // Return the newly created GameObject
         return newProp;
     }
+
     
     // Example usage of CreateProp function
-    public void CreateColumnProp()
+    public void CreatePropColumn()
     {
         // Define the distance in front of the agent where the object will be placed
         float distanceInFront = 2.0f; // Adjust this value as needed
@@ -642,6 +690,103 @@ private void DropObject()
         // AddReward(0.001f);
         // if the team scores a goal
         castleArea.m_Team1AgentGroup.AddGroupReward(0.0001f);
+    }
+    
+    
+    // Function to create a floor prop
+    public void CreatePropFloor()
+    {
+        // Define the distance in front of the agent where the object will be placed
+        float distanceInFront = 2.0f; // Adjust this value as needed
+    
+        // Calculate the position in front of the agent
+        Vector3 position = transform.position + transform.forward * distanceInFront;
+    
+        // Keep the rotation the same as the agent's rotation
+        Quaternion rotation = transform.rotation;
+    
+        // Create a 'floor Variant' prop at the calculated position and rotation
+        CreateProp("floor Variant", position, rotation);
+        CastleArea.SubtractBricks(CastleArea.brickCostPerObject);
+    
+        // Add a small group reward
+        castleArea.m_Team1AgentGroup.AddGroupReward(0.0001f);
+    }
+    
+    // Function to create a stairs prop
+    public void CreatePropStairs()
+    {
+        // Define the distance in front of the agent where the object will be placed
+        float distanceInFront = 2.0f; // Adjust this value as needed
+    
+        // Calculate the position in front of the agent
+        Vector3 position = transform.position + transform.forward * distanceInFront;
+    
+        // Adjust rotation if needed for stairs alignment
+        Quaternion rotation = transform.rotation;
+    
+        // Create a 'floor_stairs Variant' prop at the calculated position and rotation
+        CreateProp("floor_stairs Variant", position, rotation);
+        CastleArea.SubtractBricks(CastleArea.brickCostPerObject);
+    
+        // Add a small group reward
+        castleArea.m_Team1AgentGroup.AddGroupReward(0.0001f);
+    }
+    
+    // Function to create a wall prop
+    public void CreatePropWall()
+    {
+        // Define the distance in front of the agent where the object will be placed
+        float distanceInFront = 2.0f; // Adjust this value as needed
+    
+        // Calculate the position in front of the agent
+        Vector3 position = transform.position + transform.forward * distanceInFront;
+    
+        // Keep the rotation the same as the agent's rotation
+        Quaternion rotation = transform.rotation;
+    
+        // Create a 'wallPaint_half_mini' prop at the calculated position and rotation
+        CreateProp("wallPaint_half_mini", position, rotation);
+        CastleArea.SubtractBricks(CastleArea.brickCostPerObject);
+    
+        // Add a small group reward
+        castleArea.m_Team1AgentGroup.AddGroupReward(0.0001f);
+    }
+    
+    // Function to create an arch prop
+    public void CreatePropArch()
+    {
+        // Define the distance in front of the agent where the object will be placed
+        float distanceInFront = 2.0f; // Adjust this value as needed
+    
+        // Calculate the position in front of the agent
+        Vector3 position = transform.position + transform.forward * distanceInFront;
+    
+        // Keep the rotation the same as the agent's rotation
+        Quaternion rotation = transform.rotation;
+    
+        // Create a 'wallPaint_flat Variant' prop at the calculated position and rotation
+        CreateProp("wallPaint_flat Variant", position, rotation);
+        CastleArea.SubtractBricks(CastleArea.brickCostPerObject);
+    
+        // Add a small group reward
+        castleArea.m_Team1AgentGroup.AddGroupReward(0.0001f);
+    }
+
+    
+    // Check if there's a 'Floor' tagged object beneath the agent
+    bool CheckIfFloorBeneath()
+    {
+        RaycastHit hit;
+        float distanceToGround = 1.0f; // Adjust as needed
+        if (Physics.Raycast(transform.position, Vector3.down, out hit, distanceToGround))
+        {
+            if (hit.collider.CompareTag("Floor"))
+            {
+                return true;
+            }
+        }
+        return false;
     }
     
     // Function to destroy the object
@@ -683,6 +828,8 @@ private void DropObject()
             
             int moveDirection = actions.DiscreteActions[0];  // Discrete action for movement
             int rotationDirection = actions.DiscreteActions[1];  // Discrete action for rotation
+            int discreteAction = actions.DiscreteActions[2]; // Pick up/drop/destroy actions
+            int propAction = actions.DiscreteActions[3];     
 
             // Define movement and rotation step sizes
             float moveStep = moveSpeed * Time.deltaTime;
@@ -756,31 +903,25 @@ private void DropObject()
             }
             
             // Get the discrete actions for pick up and drop
-            int discreteAction = actions.DiscreteActions[2];
             bool pickUpAction;
             bool dropAction;
-            bool noBuildAction;
+            bool noBuildAction = false;
             if (discreteAction == 0)
             {   
                 // Debug.Log("ACTION: PICKUP");
                 pickUpAction = true;
+                noBuildAction = true;
             } else { pickUpAction = false;}
             if (discreteAction == 1)
             {
                 // Debug.Log("ACTION: DROP");
                 dropAction = true;
+                noBuildAction = true;
             } else { dropAction = false;}
             if (discreteAction == 2)
             {
                 // Debug.Log("ACTION: NOTHING");
                 castleArea.m_Team1AgentGroup.AddGroupReward(penaltyForNothingAction);
-                noBuildAction = true;
-            } else { noBuildAction = false;}
-            if (discreteAction == 3)
-            {
-                // Debug.Log("ACTION: CREATE");
-                // Debug.Log("SELECTED BUILD ACTION.");
-                CreateColumnProp();
             }
 
             // If the pick-up action is selected and the agent can pick up, execute the pick-up
@@ -798,7 +939,16 @@ private void DropObject()
             if (discreteAction == 4)
             {
                 DestroyObject();
+                noBuildAction = true;
             }
+            Debug.Log($"discreteaction build: {propAction}");
+            // discreteActionBuild = 0 is no build
+            if (propAction != 0 && noBuildAction == false)
+            {
+                // Build action
+                CreatePropAction(propAction);
+            }
+            
     }
     
     public override void Heuristic(in ActionBuffers actionsOut)
@@ -828,26 +978,6 @@ private void DropObject()
     private void OnTriggerEnter(Collider other)
     {
         
-        // Determine state
-        
-        // else if (buildCount >= agentArea.GetBricksObjects().Count)
-        // {
-        //     // All truffles collected, success!
-        //     EndEpisode();
-        //
-        //     // Indicate success with the ground material
-        //     StartCoroutine(agentArea.SwapGroundMaterial(success: true));
-        //
-        //     // Reset
-        //     agentArea.ResetArea();
-        // }
-        // else
-        // {
-        //     // Encourage movement with a tiny time penalty and pdate the score text display
-        //     AddReward(-.001f);
-        //     agentArea.UpdateScore(GetCumulativeReward());
-        // }
-        // Debug.Log("ENTERED SPHEREM");
         if (other.gameObject.tag == "SphereM")
         {
             // Debug.Log("Tagged SphereM");
@@ -877,19 +1007,18 @@ private void DropObject()
             
         }
         
-        // if (other.gameObject.tag =="Wall")
-        // {
-        //     // Debug.Log("hit wall");
-        //     envMaterial.color = Color.red;
-        //     // AddReward(-0.5f);
-        //     AddReward(-0.5f);
-        //     castleArea.UpdateScore(GetCumulativeReward());
-        //     Debug.Log("hit wall");
-        //     // agentArea.ResetAgent(this.gameObject);
-        //     m_AgentGroup.EndGroupEpisode();
-        //     castleArea.ResetArea();
-        //
-        // }
+        if (other.gameObject.tag =="Boundary")
+        {
+            // Debug.Log("hit wall");
+            envMaterial.color = Color.red;
+            // AddReward(-0.5f);
+            castleArea.m_Team1AgentGroup.AddGroupReward(-0.5f);
+            castleArea.UpdateScore(GetCumulativeReward());
+            Debug.Log("hit wall");
+            // agentArea.ResetAgent(this.gameObject);
+            castleArea.ResetAgent(this.gameObject);
+        
+        }
         
     }
     

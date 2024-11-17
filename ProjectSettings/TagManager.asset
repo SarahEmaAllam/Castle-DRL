@@ -17,6 +17,7 @@ TagManager:
   - SphereM
   - SphereF
   - Environment
+  - Boundary
   layers:
   - Default
   - TransparentFX
