@@ -145,17 +145,17 @@ public class CastleArea : MonoBehaviour
         occupiedPositions = new List<Tuple<Vector3, float>>();
         ResetAgents();
         // ResetResources();
-        // if (spawnedTargetListM.Count != 0)
-        // {
-        //     removeTarget(spawnedTargetListM);
-        // }
-        //
-        // if (spawnedTargetListF.Count != 0)
-        // {
-        //     removeTarget(spawnedTargetListF);
-        // }
-        // CreateFoodPropFemale(transform);
-        // CreateFoodPropMale(transform);
+        if (spawnedTargetListM.Count != 0)
+        {
+            removeTarget(spawnedTargetListM);
+        }
+        
+        if (spawnedTargetListF.Count != 0)
+        {
+            removeTarget(spawnedTargetListF);
+        }
+        CreateFoodPropFemale(transform);
+        CreateFoodPropMale(transform);
         
 
         // ResetWalls();

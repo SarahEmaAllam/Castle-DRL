@@ -53,23 +53,6 @@ behaviors:
 environment_parameters:
   targetCount:
     curriculum:
-      - value: 2
-        completion_criteria:
-          measure: progress
-          signal_smoothing: true
-          min_lesson_length: 15
-          threshold: 0.2
-      - value: 4
-        completion_criteria:
-          measure: progress
-          signal_smoothing: true
-          min_lesson_length: 15
-          threshold: 0.6
-          require_reset: true
-      - value: 0
-environment_parameters:
-  targetCount:
-    curriculum:
       - name: SearchEasy
         value: 2
         completion_criteria:
@@ -89,3 +72,22 @@ environment_parameters:
           behavior: FemaleAgent
       - name: HideSeek
         value: 0
+  maleImmobility:
+    curriculum:
+      - name: ImmobilePhase
+        value: 1
+        completion_criteria:
+          measure: progress
+          signal_smoothing: true
+          min_lesson_length: 15
+          threshold: 0.4
+          behavior: MaleAgentV
+      - name: MobilePhase
+        value: 0
+        completion_criteria:
+          measure: progress
+          signal_smoothing: true
+          min_lesson_length: 15
+          threshold: 1.0
+          require_reset: true
+          behavior: MaleAgentV

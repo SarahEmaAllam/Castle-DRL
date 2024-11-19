@@ -403,6 +403,42 @@ private void DrawWireCube(Vector3 position, Vector3 size, Color color)
     // Mask or unmask the pick-up action based on collision status
     public override void WriteDiscreteActionMask(IDiscreteActionMask actionMask)
     {
+        float immobilityValue = Academy.Instance.EnvironmentParameters.GetWithDefault("maleImmobility", 0.0f);
+
+        // If immobility is enabled (value is 1.0), mask all actions
+        if (immobilityValue >= 1)
+        {
+            // Mask all actions in all branches
+
+            // Branch 0: Movement actions (indices 0-2)
+            for (int i = 1; i <= 2; i++)
+            {
+                actionMask.SetActionEnabled(0, i, false);
+            }
+
+            // Branch 1: Rotation actions (indices 0-2)
+            for (int i = 1; i <= 2; i++)
+            {
+                actionMask.SetActionEnabled(1, i, false);
+            }
+
+            // Branch 2: Discrete actions (indices 0-4)
+            for (int i = 0; i <= 4; i++)
+            {
+                actionMask.SetActionEnabled(2, i, false);
+            }
+            actionMask.SetActionEnabled(2, 2, true);
+
+            // Branch 3: Prop actions (indices 0-5)
+            for (int i = 1; i <= 5; i++)
+            {
+                actionMask.SetActionEnabled(3, i, false);
+            }
+
+            // Exit the function early since all actions are masked
+            return;
+        }
+        
         // Mask movement actions that would result in a collision
         for (int moveDirection = 1; moveDirection <= 2; moveDirection++) // Assuming 1: Forward, 2: Backward
         {
