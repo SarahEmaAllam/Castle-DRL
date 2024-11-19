@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using System;
 using System.IO;
-using UnityEditor;
 using UnityEngine;
 
 public class CastleArea : MonoBehaviour
@@ -90,7 +89,23 @@ public class CastleArea : MonoBehaviour
     void Start()
     {
         Initialize();
+        Academy.Instance.OnEnvironmentReset += UpdateEnvironmentParameters;
+
     }
+    
+    private void UpdateEnvironmentParameters()
+    {
+        // Get the current value of 'targetCount' from the Environment Parameters
+        targetCount = Mathf.RoundToInt(Academy.Instance.EnvironmentParameters.GetWithDefault("targetCount", 2));
+        
+    }
+    
+    void OnDestroy()
+    {
+        // Unsubscribe to avoid memory leaks
+        Academy.Instance.OnEnvironmentReset -= UpdateEnvironmentParameters;
+    }
+    
     private void Initialize()
     {
         // Get the ground renderer so we can change the material when a goal is scored
@@ -174,7 +189,7 @@ public class CastleArea : MonoBehaviour
         if (m_ResetTimer % MaxTraining == 0)
         {
             int stage = m_ResetTimer / MaxTraining;
-            SaveAsPrefab(stage);
+//            SaveAsPrefab(stage);
         }
         
     }
@@ -629,15 +644,15 @@ public class CastleArea : MonoBehaviour
 
 
     
-    public void SaveAsPrefab(int stage)
-    {
-        // Path where the prefab will be saved
-        string prefabPath = $"Assets/Resources/EnvTrained_{stage}.prefab";
-        // Create the prefab from the Env GameObject
-        PrefabUtility.SaveAsPrefabAsset(this.gameObject, prefabPath);
-        
-        Debug.Log("Environment saved as a prefab at: " + prefabPath);
-    }
+//    public void SaveAsPrefab(int stage)
+//    {
+//        // Path where the prefab will be saved
+//        string prefabPath = $"Assets/Resources/EnvTrained_{stage}.prefab";
+//        // Create the prefab from the Env GameObject
+//        PrefabUtility.SaveAsPrefabAsset(this.gameObject, prefabPath);
+//
+//        Debug.Log("Environment saved as a prefab at: " + prefabPath);
+//    }
     // public void LoadEnvironment(string filePath)
     //     {
     //         if (File.Exists(filePath))

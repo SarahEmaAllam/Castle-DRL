@@ -9,7 +9,8 @@ using Unity.MLAgents.Actuators;
 public class MaleAgentV2 : Agent
 
 {
-    
+    private GameObject stairsObject;
+
     private RayPerceptionSensorComponent3D rayPerceptionSensor;
     // target variables for builing
     [SerializeField] private Transform buildTransform;
@@ -282,27 +283,54 @@ public class MaleAgentV2 : Agent
     // This function checks if the agent's next move will collide with any other object, including other agents
 private bool WouldCollide(Vector3 moveVector)
 {
-    // Retrieve the BoxCollider component from the agent
+    // Retrieve all Collider components from the agent
+    Collider[] colliders = GetComponents<Collider>();
 
-    if (boxCollider == null)
+    if (colliders == null || colliders.Length == 0)
     {
-        Debug.LogError("BoxCollider not found on the agent.");
-        return false; // If no collider is found, assume no collision for safety
+        Debug.LogError("No Colliders found on the agent.");
+        return false; // If no colliders are found, assume no collision for safety
     }
 
-    // Use the bounds of the collider to get the correctly scaled size
-    Vector3 boxSize = boxCollider.bounds.size;  // This gives the correct world size of the collider
+    // Iterate through each collider attached to the agent
+    foreach (Collider agentCollider in colliders)
+    {
+        // Skip trigger colliders if they should not be considered for movement collision
+        if (agentCollider.isTrigger)
+        {
+            continue;
+        }
 
-    // Calculate the position to check for potential collisions
-    // DrawWireCube(transform.position, boxSize, Color.yellow);
-    Vector3 checkPosition = transform.position + moveVector;
+        // Use the bounds of the collider to get the correctly scaled size
+        Vector3 boxSize = agentCollider.bounds.size;  // This gives the correct world size of the collider
 
-    // Draw the bounding box of the agent at the intended new position using lines
-    // DrawWireCube(checkPosition, boxSize, Color.green);
+        // Calculate the position to check for potential collisions
+        Vector3 colliderCenterOffset = agentCollider.bounds.center - transform.position;
+        Vector3 checkPosition = transform.position + moveVector + colliderCenterOffset;
 
-    // Perform collision detection using OverlapBox to gather colliders
-    Collider[] hitColliders = Physics.OverlapBox(checkPosition, boxSize / 2, Quaternion.identity, ~LayerMask.GetMask("Ground"), QueryTriggerInteraction.Ignore);
+        // Use the agent's rotation for accurate collision detection
+        Quaternion rotation = transform.rotation;
 
+        // Perform collision detection using OverlapBox to gather colliders
+        Collider[] hitColliders = Physics.OverlapBox(
+            checkPosition,
+            boxSize / 2,
+            rotation,
+            ~LayerMask.GetMask("Ground"), // Adjust the layer mask as needed
+            QueryTriggerInteraction.Ignore
+        );
+
+        // Iterate through the colliders to check for collisions with other objects
+        foreach (Collider hitCollider in hitColliders)
+        {
+            // Ignore self-collision (colliders attached to this game object)
+            if (hitCollider.gameObject != gameObject && !hitCollider.isTrigger)
+            {
+                // Collision detected with another object
+                return true;
+            }
+        }
+    }
     // Check if there are any colliders and log their details
     // foreach (Collider hitCollider in hitColliders)
     // {
@@ -328,8 +356,11 @@ private bool WouldCollide(Vector3 moveVector)
     // }
 
     // Return true if there is any collider detected, indicating a potential collision
-    return hitColliders.Length > 0;
+    // return hitColliders.Length > 0;
+    
+    return false;
 }
+
 
 // Helper method to draw a wireframe cube using Debug.DrawLine
 private void DrawWireCube(Vector3 position, Vector3 size, Color color)
@@ -485,6 +516,18 @@ private void DrawWireCube(Vector3 position, Vector3 size, Color color)
             // Unmask the destroy action if there is an object to destroy
             actionMask.SetActionEnabled(2, 3, true);
         }
+        // **New:** Mask 'Use stairs' action
+        if (CheckForStairs())
+        {
+            actionMask.SetActionEnabled(2, 4, true); // Unmask 'Use stairs' action in branch 2
+        }
+        else
+        {
+            actionMask.SetActionEnabled(2, 4, false); // Mask 'Use stairs' action
+        }
+        
+        // DISABLE ACTION FOR GOING UP THE STAIRS 
+        actionMask.SetActionEnabled(2, 4, false);
     }
     
     
@@ -683,7 +726,15 @@ private void DropObject()
         Quaternion rotation = transform.rotation;
 
         // Create a 'floor' prop at the calculated position and rotation
-        CreateProp("column_mini", position, rotation);
+        GameObject newProp = CreateProp("column_mini", position, rotation);
+
+        if (newProp != null)
+        {
+            newProp.tag = "Column";
+            // **Set the layer of the new prop to 'Pickable'**
+            newProp.layer = LayerMask.NameToLayer("Pickable");
+        }
+        // CreateProp("column_mini", position, rotation);
         CastleArea.SubtractBricks(CastleArea.brickCostPerObject);
         // Debug.Log($"Take: {CastleArea.numBricks}");
 
@@ -706,7 +757,14 @@ private void DropObject()
         Quaternion rotation = transform.rotation;
     
         // Create a 'floor Variant' prop at the calculated position and rotation
-        CreateProp("floor Variant", position, rotation);
+        // Create a 'floor' prop at the calculated position and rotation
+        GameObject newProp = CreateProp("column_mini", position, rotation);
+
+        if (newProp != null)
+        {
+            newProp.tag = "Floor";
+            // **Set the layer of the new prop to 'Pickable'**
+        }
         CastleArea.SubtractBricks(CastleArea.brickCostPerObject);
     
         // Add a small group reward
@@ -726,7 +784,14 @@ private void DropObject()
         Quaternion rotation = transform.rotation;
     
         // Create a 'floor_stairs Variant' prop at the calculated position and rotation
-        CreateProp("floor_stairs Variant", position, rotation);
+        // Create a 'floor' prop at the calculated position and rotation
+        GameObject newProp = CreateProp("floor_stairs Variant", position, rotation);
+
+        if (newProp != null)
+        {
+            newProp.tag = "Stairs";
+            // **Set the layer of the new prop to 'Pickable'**
+        }
         CastleArea.SubtractBricks(CastleArea.brickCostPerObject);
     
         // Add a small group reward
@@ -746,7 +811,14 @@ private void DropObject()
         Quaternion rotation = transform.rotation;
     
         // Create a 'wallPaint_half_mini' prop at the calculated position and rotation
-        CreateProp("wallPaint_half_mini", position, rotation);
+        GameObject newProp = CreateProp("wallPaint_half_mini", position, rotation);
+
+        if (newProp != null)
+        {
+            newProp.tag = "Wall";
+            // **Set the layer of the new prop to 'Pickable'**
+            newProp.layer = LayerMask.NameToLayer("Pickable");
+        }
         CastleArea.SubtractBricks(CastleArea.brickCostPerObject);
     
         // Add a small group reward
@@ -766,7 +838,14 @@ private void DropObject()
         Quaternion rotation = transform.rotation;
     
         // Create a 'wallPaint_flat Variant' prop at the calculated position and rotation
-        CreateProp("wallPaint_flat Variant", position, rotation);
+        GameObject newProp = CreateProp("wallPaint_flat Variant", position, rotation);
+
+        if (newProp != null)
+        {
+            newProp.tag = "Arch";
+            // **Set the layer of the new prop to 'Pickable'**
+            newProp.layer = LayerMask.NameToLayer("Pickable");
+        }
         CastleArea.SubtractBricks(CastleArea.brickCostPerObject);
     
         // Add a small group reward
@@ -804,6 +883,53 @@ private void DropObject()
             objectToDestroy = null;
         }
     }
+    
+    private bool CheckForStairs()
+    {
+        float checkRadius = 1.0f; // Adjust as needed
+        Collider[] hitColliders = Physics.OverlapSphere(transform.position, checkRadius);
+        foreach (var hitCollider in hitColliders)
+        {
+            if (hitCollider.CompareTag("Stairs"))
+            {
+                stairsObject = hitCollider.gameObject;
+                return true;
+            }
+        }
+        stairsObject = null;
+        return false;
+    }
+
+    private void UseStairs()
+    {
+        if (stairsObject != null)
+        {
+            // Get the height of the stairs object
+            Collider stairsCollider = stairsObject.GetComponent<Collider>();
+            if (stairsCollider != null)
+            {
+                Bounds stairsBounds = stairsCollider.bounds;
+                float stairsHeight = stairsBounds.size.y;
+
+                // Calculate the new position at the top of the stairs
+                Vector3 newPosition = stairsObject.transform.position;
+                newPosition.y += stairsHeight;
+
+                // Optional: Adjust position to be slightly forward on the stairs
+                newPosition += stairsObject.transform.forward * 0.5f; // Adjust as needed
+
+                // Move the agent to the new position
+                rb.MovePosition(newPosition);
+
+                // Optionally, adjust agent's rotation to match the stairs' rotation
+                rb.MoveRotation(stairsObject.transform.rotation);
+
+                // Clear the stairsObject reference
+                stairsObject = null;
+            }
+        }
+    }
+
 
 
         public override void OnActionReceived(ActionBuffers actions)
@@ -936,11 +1062,19 @@ private void DropObject()
                 DropObject();
             }
             
-            if (discreteAction == 4)
+            if (discreteAction == 3)
             {
                 DestroyObject();
                 noBuildAction = true;
             }
+            
+            if (discreteAction == 4)
+            {
+                // **New:** Use stairs action
+                UseStairs();
+                noBuildAction = true;
+            }
+            
             Debug.Log($"discreteaction build: {propAction}");
             // discreteActionBuild = 0 is no build
             if (propAction != 0 && noBuildAction == false)
