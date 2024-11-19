@@ -51,7 +51,7 @@ behaviors:
     summary_freq: 1000
 
 environment_parameters:
-  targetCount:
+  targetCountF:
     curriculum:
       - name: SearchEasy
         value: 2
@@ -79,7 +79,7 @@ environment_parameters:
         completion_criteria:
           measure: progress
           signal_smoothing: true
-          min_lesson_length: 15
+          min_lesson_length: 2
           threshold: 0.4
           behavior: MaleAgentV
       - name: MobilePhase
@@ -87,7 +87,28 @@ environment_parameters:
         completion_criteria:
           measure: progress
           signal_smoothing: true
-          min_lesson_length: 15
+          min_lesson_length: 2
           threshold: 1.0
           require_reset: true
           behavior: MaleAgentV
+  targetCountM:
+    curriculum:
+      - name: SearchEasy
+        value: 2
+        completion_criteria:
+          measure: progress
+          signal_smoothing: true
+          min_lesson_length: 2
+          threshold: 0.4
+          behavior: MaleAgentV
+      - name: SearchHard
+        value: 4
+        completion_criteria:
+          measure: progress
+          signal_smoothing: true
+          min_lesson_length: 2
+          threshold: 0.6
+          require_reset: true
+          behavior: MaleAgentV
+      - name: HideSeek
+        value: 0

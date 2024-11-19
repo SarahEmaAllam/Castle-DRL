@@ -403,10 +403,13 @@ private void DrawWireCube(Vector3 position, Vector3 size, Color color)
     // Mask or unmask the pick-up action based on collision status
     public override void WriteDiscreteActionMask(IDiscreteActionMask actionMask)
     {
-        float immobilityValue = Academy.Instance.EnvironmentParameters.GetWithDefault("maleImmobility", 0.0f);
-
         // If immobility is enabled (value is 1.0), mask all actions
-        if (immobilityValue >= 1)
+        Debug.Log("Step Count: " + Academy.Instance.StepCount);
+        Debug.Log(Academy.Instance.EnvironmentParameters);
+        Debug.Log("Total Step Count: " + Academy.Instance.TotalStepCount);
+        Debug.Log("Max Step: " + MaxStep);
+        Debug.Log("Immobility Value: " + castleArea.maleImmobility);
+        if (castleArea.maleImmobility >= 1.0f)
         {
             // Mask all actions in all branches
 
@@ -437,7 +440,7 @@ private void DrawWireCube(Vector3 position, Vector3 size, Color color)
 
             // Exit the function early since all actions are masked
             return;
-        }
+        } 
         
         // Mask movement actions that would result in a collision
         for (int moveDirection = 1; moveDirection <= 2; moveDirection++) // Assuming 1: Forward, 2: Backward

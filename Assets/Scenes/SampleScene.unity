@@ -3126,6 +3126,10 @@ PrefabInstance:
       propertyPath: m_BrainParameters.m_ActionSpec.BranchSizes.Array.data[3]
       value: 6
       objectReference: {fileID: 0}
+    - target: {fileID: 623569473186218627, guid: a2acaa76fbd498942972083919c7e46a, type: 3}
+      propertyPath: MaxStep
+      value: 1000
+      objectReference: {fileID: 0}
     - target: {fileID: 623569473995343378, guid: a2acaa76fbd498942972083919c7e46a, type: 3}
       propertyPath: m_Model
       value: 
@@ -3158,6 +3162,10 @@ PrefabInstance:
       propertyPath: m_BrainParameters.m_ActionSpec.BranchSizes.Array.data[3]
       value: 6
       objectReference: {fileID: 0}
+    - target: {fileID: 623569473995343379, guid: a2acaa76fbd498942972083919c7e46a, type: 3}
+      propertyPath: MaxStep
+      value: 1000
+      objectReference: {fileID: 0}
     - target: {fileID: 822757782955371508, guid: a2acaa76fbd498942972083919c7e46a, type: 3}
       propertyPath: m_Model
       value: 
@@ -3189,6 +3197,10 @@ PrefabInstance:
     - target: {fileID: 822757782955371508, guid: a2acaa76fbd498942972083919c7e46a, type: 3}
       propertyPath: m_BrainParameters.m_ActionSpec.BranchSizes.Array.data[3]
       value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 822757782955371516, guid: a2acaa76fbd498942972083919c7e46a, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 822757783193461288, guid: a2acaa76fbd498942972083919c7e46a, type: 3}
       propertyPath: m_Model
@@ -3242,6 +3254,14 @@ PrefabInstance:
       propertyPath: env
       value: 
       objectReference: {fileID: 3263835831461995612}
+    - target: {fileID: 3847142121846121163, guid: a2acaa76fbd498942972083919c7e46a, type: 3}
+      propertyPath: MaxEnvironmentSteps
+      value: 300
+      objectReference: {fileID: 0}
+    - target: {fileID: 5267393672487216576, guid: a2acaa76fbd498942972083919c7e46a, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 6616917539497787270, guid: a2acaa76fbd498942972083919c7e46a, type: 3}
       propertyPath: m_Name
       value: Env
@@ -3249,6 +3269,14 @@ PrefabInstance:
     - target: {fileID: 6616917539497787270, guid: a2acaa76fbd498942972083919c7e46a, type: 3}
       propertyPath: m_IsActive
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8547684846973009416, guid: a2acaa76fbd498942972083919c7e46a, type: 3}
+      propertyPath: MaxStep
+      value: 1000
+      objectReference: {fileID: 0}
+    - target: {fileID: 8547684847269820366, guid: a2acaa76fbd498942972083919c7e46a, type: 3}
+      propertyPath: MaxStep
+      value: 1000
       objectReference: {fileID: 0}
     - target: {fileID: 8786303817608813218, guid: a2acaa76fbd498942972083919c7e46a, type: 3}
       propertyPath: m_RootOrder
@@ -3325,6 +3353,10 @@ PrefabInstance:
     - target: {fileID: 9192558671339338196, guid: a2acaa76fbd498942972083919c7e46a, type: 3}
       propertyPath: m_BrainParameters.m_ActionSpec.BranchSizes.Array.data[3]
       value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 9192558671339338197, guid: a2acaa76fbd498942972083919c7e46a, type: 3}
+      propertyPath: MaxStep
+      value: 1000
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: a2acaa76fbd498942972083919c7e46a, type: 3}

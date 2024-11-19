@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using System;
 using System.IO;
+using UnityEditor;
 using UnityEngine;
 
 public class CastleArea : MonoBehaviour
@@ -18,8 +19,8 @@ public class CastleArea : MonoBehaviour
     public Material failureMaterial;
     public TextMeshPro scoreText;
     private int m_ResetTimer;
-    public int MaxEnvironmentSteps = 1000;
-    private int MaxTraining = 5000;
+    public int MaxEnvSteps = 1000;
+    private int MaxTraining = 10000;
     private float rangeZ = 8;
     private float rangeX = 29;
     
@@ -28,7 +29,10 @@ public class CastleArea : MonoBehaviour
     public GameObject wallPrefab;
 
     // [HideInInspector]
-    public int targetCount = 2;
+    public int targetCountF = 2;
+    public int targetCountM = 2;
+    public float maleImmobility = 1.0f;
+    
     public static float numBricks = 10f;
     public static float maxBricks = 0f;
     public const float brickCostPerObject = 1f;
@@ -96,8 +100,8 @@ public class CastleArea : MonoBehaviour
     private void UpdateEnvironmentParameters()
     {
         // Get the current value of 'targetCount' from the Environment Parameters
-        targetCount = Mathf.RoundToInt(Academy.Instance.EnvironmentParameters.GetWithDefault("targetCount", 2));
-        
+        // targetCountF = Mathf.RoundToInt(Academy.Instance.EnvironmentParameters.GetWithDefault("targetCountF", 2));
+        // targetCountM = Mathf.RoundToInt(Academy.Instance.EnvironmentParameters.GetWithDefault("targetCountM", 2));
     }
     
     void OnDestroy()
@@ -175,21 +179,32 @@ public class CastleArea : MonoBehaviour
         if (!m_Initialized) return;
         //RESET SCENE IF WE MaxEnvironmentSteps
         m_ResetTimer += 1;
-        if (m_ResetTimer % 300 == 0)
+        Debug.Log($"m_ResetTimer {m_ResetTimer}, MaxEnvSteps {MaxEnvSteps}, % {m_ResetTimer % MaxEnvSteps}");
+        
+        if (m_ResetTimer % MaxEnvSteps >= 400)
+        {
+            maleImmobility = 0.0f;
+            targetCountM = 2;
+            targetCountF = 4;
+        }
+        else
+        {
+            maleImmobility = 1.0f;
+            targetCountM = 0;
+            targetCountF = 2;
+        }
+        
+        if (m_ResetTimer % MaxEnvSteps == 0)
         {
             m_Team0AgentGroup.EndGroupEpisode();
             m_Team1AgentGroup.EndGroupEpisode();
-        }
-        
-        if (m_ResetTimer % MaxEnvironmentSteps == 0)
-        {
             ResetArea();
         }
         
         if (m_ResetTimer % MaxTraining == 0)
         {
             int stage = m_ResetTimer / MaxTraining;
-//            SaveAsPrefab(stage);
+            SaveAsPrefab(stage);
         }
         
     }
@@ -393,8 +408,8 @@ public class CastleArea : MonoBehaviour
         // {
         //     removeTarget(spawnedTargetListM);
         // }
-        int numberOfNewTargetsNeeded = targetCount - spawnedTargetListM.Count;
-        Debug.Log($"numberOfNewTargetsNeeded: {numberOfNewTargetsNeeded} and {spawnedTargetListM.Count}");
+        int numberOfNewTargetsNeeded = targetCountM - spawnedTargetListM.Count;
+        Debug.Log($"numberOfNewTargetsNeeded MALE: {numberOfNewTargetsNeeded} and {spawnedTargetListM.Count}");
         for (int i = 0 ; i < numberOfNewTargetsNeeded; i++)
         {
             // Debug.Log($"Create ball M no: {i} to {targetCount}");
@@ -425,7 +440,8 @@ public class CastleArea : MonoBehaviour
         //     removeTarget(spawnedTargetListF);
         // }
         // Debug.Log($"Name : {envLocation.gameObject.name}");
-        int numberOfNewTargetsNeeded = targetCount - spawnedTargetListF.Count;
+        int numberOfNewTargetsNeeded = targetCountF - spawnedTargetListF.Count;
+        Debug.Log($"numberOfNewTargetsNeeded FEMALE: {numberOfNewTargetsNeeded}");
         for (int i = 0 ; i < numberOfNewTargetsNeeded; i++)
         {
             // Debug.Log($"Create ball F no: {i} to {targetCount}");
@@ -644,15 +660,15 @@ public class CastleArea : MonoBehaviour
 
 
     
-//    public void SaveAsPrefab(int stage)
-//    {
-//        // Path where the prefab will be saved
-//        string prefabPath = $"Assets/Resources/EnvTrained_{stage}.prefab";
-//        // Create the prefab from the Env GameObject
-//        PrefabUtility.SaveAsPrefabAsset(this.gameObject, prefabPath);
-//
-//        Debug.Log("Environment saved as a prefab at: " + prefabPath);
-//    }
+    public void SaveAsPrefab(int stage)
+    {
+        // Path where the prefab will be saved
+        string prefabPath = $"Assets/Resources/EnvTrained_{stage}.prefab";
+        // Create the prefab from the Env GameObject
+        PrefabUtility.SaveAsPrefabAsset(this.gameObject, prefabPath);
+
+        Debug.Log("Environment saved as a prefab at: " + prefabPath);
+    }
     // public void LoadEnvironment(string filePath)
     //     {
     //         if (File.Exists(filePath))
