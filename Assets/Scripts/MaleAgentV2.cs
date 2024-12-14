@@ -58,6 +58,16 @@ public class MaleAgentV2 : Agent
     Material envMaterial;
     public GameObject env;
 
+    // Room reward
+    // Number of rays to cast around the point
+    private int numberOfRays = 36;
+    // Maximum distance for each raycast
+    private float rayDistance = 2.5f;
+    // Tag to detect as wall
+    private string wallTag = "Wall";
+    // Threshold proportion to consider the space enclosed
+    private float enclosureThreshold = 0.75f;
+    
 
 
     public override void Initialize()
@@ -278,6 +288,19 @@ public class MaleAgentV2 : Agent
         sensor.AddObservation(transform.position); // Agent's position
         sensor.AddObservation(CastleArea.numBricks); // Global number of bricks
         // Add other relevant observations if needed
+        
+        
+        // Room Reward function
+        // Assume the agent's position is the point of interest
+        Vector3 point = transform.position;
+
+        // Calculate the reward
+        float enclosureReward = CalculateEnclosureReward(point);
+
+        Debug.Log($"ROOM REWARD: {enclosureReward}");
+
+        // Use the reward in your reinforcement learning algorithm
+        castleArea.m_Team1AgentGroup.AddGroupReward(enclosureReward);
     }
     
     // This function checks if the agent's next move will collide with any other object, including other agents
@@ -401,226 +424,193 @@ private void DrawWireCube(Vector3 position, Vector3 size, Color color)
 
     
     // Mask or unmask the pick-up action based on collision status
-    public override void WriteDiscreteActionMask(IDiscreteActionMask actionMask)
+public override void WriteDiscreteActionMask(IDiscreteActionMask actionMask)
+{
+    Debug.Log("Step Count: " + Academy.Instance.StepCount);
+    Debug.Log(Academy.Instance.EnvironmentParameters);
+    Debug.Log("Total Step Count: " + Academy.Instance.TotalStepCount);
+    Debug.Log("Max Step: " + MaxStep);
+    Debug.Log("Immobility Value: " + castleArea.maleImmobility);
+
+    // Our action space indices:
+    // 0: Do Nothing
+    // 1: Move Forward
+    // 2: Move Backward
+    // 3: Rotate Left
+    // 4: Rotate Right
+    // 5: Pick Up
+    // 6: Drop
+    // 7: Destroy
+    // 8: Use Stairs
+    // 9: column_mini
+    // 10: floor
+    // 11: floor_stairs
+    // 12: wallPaint_half_mini
+    // 13: wallPaint_flat variant
+
+    int totalActions = 14; // indices 0 to 13
+
+    // Enable all actions by default
+    for (int i = 0; i < totalActions; i++)
     {
-        // If immobility is enabled (value is 1.0), mask all actions
-        Debug.Log("Step Count: " + Academy.Instance.StepCount);
-        Debug.Log(Academy.Instance.EnvironmentParameters);
-        Debug.Log("Total Step Count: " + Academy.Instance.TotalStepCount);
-        Debug.Log("Max Step: " + MaxStep);
-        Debug.Log("Immobility Value: " + castleArea.maleImmobility);
-        if (castleArea.maleImmobility >= 1.0f)
-        {
-            // Mask all actions in all branches
-
-            // Branch 0: Movement actions (indices 0-2)
-            for (int i = 1; i <= 2; i++)
-            {
-                actionMask.SetActionEnabled(0, i, false);
-            }
-
-            // Branch 1: Rotation actions (indices 0-2)
-            for (int i = 1; i <= 2; i++)
-            {
-                actionMask.SetActionEnabled(1, i, false);
-            }
-
-            // Branch 2: Discrete actions (indices 0-4)
-            for (int i = 0; i <= 4; i++)
-            {
-                actionMask.SetActionEnabled(2, i, false);
-            }
-            actionMask.SetActionEnabled(2, 2, true);
-
-            // Branch 3: Prop actions (indices 0-5)
-            for (int i = 1; i <= 5; i++)
-            {
-                actionMask.SetActionEnabled(3, i, false);
-            }
-
-            // Exit the function early since all actions are masked
-            return;
-        } 
-        
-        // Mask movement actions that would result in a collision
-        for (int moveDirection = 1; moveDirection <= 2; moveDirection++) // Assuming 1: Forward, 2: Backward
-        {
-            Vector3 moveVector = Vector3.zero;
-
-            switch (moveDirection)
-            {
-                case 1:
-                    // Move forward
-                    moveVector = transform.forward * moveSpeed;
-                    break;
-                case 2:
-                    // Move backward
-                    moveVector = -transform.forward * moveSpeed;
-                    break;
-            }
-
-            // Mask the action if the movement would result in a collision
-            if (WouldCollide(moveVector))
-            {
-                // Debug.Log($"COLLIDES");
-                actionMask.SetActionEnabled(0, moveDirection, false); // Assuming move actions are indexed at branch 0
-            }
-            else
-            {
-                // Debug.Log($"DOES NOT COLLIDE");
-                actionMask.SetActionEnabled(0, moveDirection, true);
-            }
-        }
-        
-        if (!canPickUp || pickedUpObject != null)
-        {
-            // Mask the pick-up action if the agent can't pick up or already holds something
-            actionMask.SetActionEnabled(2, 0, false);
-        }
-        else
-        {
-            // Unmask the pick-up action if the agent can pick up
-            actionMask.SetActionEnabled(2, 0, true);
-        }
-        
-        if (pickedUpObject != null)
-        {
-            Collider objectCollider = pickedUpObject.GetComponent<Collider>();
-            if (objectCollider != null)
-            {
-                Vector3 halfExtents = objectCollider.bounds.extents;
-                Vector3 dropPosition = transform.position + transform.forward * (halfExtents.z + 0.5f);
-                // There is enough space to place the gameobject and not collide with something else pickable
-                if (Physics.CheckBox(dropPosition, halfExtents, Quaternion.identity, LayerMask.GetMask("Pickable")))
-                {
-                    // Mask the drop action (assuming the drop action index is 1)
-                    actionMask.SetActionEnabled(2, 1, false);
-                }
-                else
-                {
-                    actionMask.SetActionEnabled(2, 1, true);
-                }
-            }
-        }
-        else
-        {
-            actionMask.SetActionEnabled(2, 1, false);
-        }
-        
-        
-        // Try to subtract the necessary Bricks
-        Debug.Log($"Bricks: {CastleArea.numBricks} , Time: {CastleArea.BricksTimeFunction()}" );
-        if (CastleArea.CheckSubtractBricks(CastleArea.brickCostPerObject) && CastleArea.BricksTimeFunction())
-        {
-            canBuild = true;
-            // Debug.Log("CAN BUILD==================");
-            // Now, set action masks for branch 3 (propAction)
-            // First, unmask all propActions
-            actionMask.SetActionEnabled(3, 1, true); // 'column_mini'
-            actionMask.SetActionEnabled(3, 2, true); // 'floor Variant'
-            actionMask.SetActionEnabled(3, 3, true); // 'floor_stairs Variant'
-            actionMask.SetActionEnabled(3, 4, true); // 'wallPaint_half_mini'
-            actionMask.SetActionEnabled(3, 5, true); // 'wallPaint_flat Variant'
-            
-            // Special case for 'floor_stairs Variant'
-            if (CheckIfFloorBeneath())
-            {
-                // Mask the action to create 'floor_stairs Variant' (propAction index 2)
-                actionMask.SetActionEnabled(3, 2, false);
-            }
-            else
-            {
-                actionMask.SetActionEnabled(3, 3, false);
-            }
-        }
-        else
-        {
-            canBuild = false;
-            // Mask all actions in branch 3
-            for (int i = 1; i < 6; i++)
-            {
-                actionMask.SetActionEnabled(3, i, false);
-            }
-            
-        }
-        
-        // destroy pickable object
-        if (objectToDestroy == null)
-        {
-            // Mask the destroy action (assuming the destroy action index is 4)
-            actionMask.SetActionEnabled(2, 3, false);
-        }
-        else
-        {
-            // Unmask the destroy action if there is an object to destroy
-            actionMask.SetActionEnabled(2, 3, true);
-        }
-        // **New:** Mask 'Use stairs' action
-        if (CheckForStairs())
-        {
-            actionMask.SetActionEnabled(2, 4, true); // Unmask 'Use stairs' action in branch 2
-        }
-        else
-        {
-            actionMask.SetActionEnabled(2, 4, false); // Mask 'Use stairs' action
-        }
-        
-        // DISABLE ACTION FOR GOING UP THE STAIRS 
-        actionMask.SetActionEnabled(2, 4, false);
+        actionMask.SetActionEnabled(0, i, true);
     }
+
+    // If immobile, only allow "Do Nothing" (index 0)
+    if (castleArea.maleImmobility >= 1.0f)
+    {
+        for (int i = 1; i < totalActions; i++)
+        {
+            actionMask.SetActionEnabled(0, i, false);
+        }
+        return;
+    }
+
+    // Check movement collisions
+    // Forward (1)
+    if (WouldCollide(transform.forward * moveSpeed))
+    {
+        actionMask.SetActionEnabled(0, 1, false);
+    }
+    // Backward (2)
+    if (WouldCollide(-transform.forward * moveSpeed))
+    {
+        actionMask.SetActionEnabled(0, 2, false);
+    }
+
+    // Pick Up (5): only if canPickUp and not holding something
+    // If the agent cannot pick up or is already holding something, mask the pickup action
+    if (!canPickUp || pickedUpObject != null)
+    {
+        actionMask.SetActionEnabled(0, 5, false); // Assuming 5 is the index for pickup
+    }
+    else
+    {
+        actionMask.SetActionEnabled(0, 5, true);
+    }
+    // Drop (6): only if holding something and can place it
+    if (pickedUpObject == null)
+    {
+        actionMask.SetActionEnabled(0, 6, false);
+    }
+    else
+    {
+        Collider objectCollider = pickedUpObject.GetComponent<Collider>();
+        if (objectCollider != null)
+        {
+            Vector3 halfExtents = objectCollider.bounds.extents;
+            Vector3 dropPosition = transform.position + transform.forward * (halfExtents.z + 0.5f);
+            if (Physics.CheckBox(dropPosition, halfExtents, Quaternion.identity, LayerMask.GetMask("Pickable")))
+            {
+                actionMask.SetActionEnabled(0, 6, false);
+            }
+        }
+    }
+
+    // Destroy (7): only if objectToDestroy is not null
+    if (objectToDestroy == null)
+    {
+        actionMask.SetActionEnabled(0, 7, false);
+    }
+    else
+    {
+        actionMask.SetActionEnabled(0, 7, true);
+    }
+
+    // Use Stairs (8): only if CheckForStairs()
+    if (!CheckForStairs())
+    {
+        actionMask.SetActionEnabled(0, 8, false);
+    }
+
+    // Disable always the 'Use Stairs' after checking? If desired:
+    // actionMask.SetActionEnabled(0, 8, false); // If you want to always disable as previous code did.
+
+    // Building actions (9 to 13): only if we can build
+    bool canBuild = CastleArea.CheckSubtractBricks(CastleArea.brickCostPerObject) && CastleArea.BricksTimeFunction();
+    if (!canBuild)
+    {
+        // Disable all builds
+        for (int i = 9; i <= 13; i++)
+        {
+            actionMask.SetActionEnabled(0, i, false);
+        }
+    }
+    else
+    {
+        // Special flooring logic:
+        bool floorBeneath = CheckIfFloorBeneath();
+
+        // If floor beneath, we might need to disable certain build actions.
+        // Original logic: If floor beneath, can't place 'floor_stairs' variant or must disable one of them.
+        // For simplicity, let's follow original logic as closely as possible:
+        // The original code masked floor or floor_stairs based on floor presence:
+        // If floor beneath, mask floor_stairs (index 11)
+        // If no floor beneath, mask floor (index 10)
+        if (floorBeneath)
+        {
+            actionMask.SetActionEnabled(0, 11, false); // floor_stairs variant disabled if floor beneath
+        }
+        else
+        {
+            actionMask.SetActionEnabled(0, 10, false); // floor variant disabled if no floor beneath
+        }
+    }
+}
+
     
     
     // Handle collisions
     private void OnCollisionEnter(Collision collision)
     {
         // Check if the collided object is in the "Pickable" layer
-        // Debug.Log($"COLLI: {collision}");
         if (collision.gameObject.layer == LayerMask.NameToLayer("Pickable"))
         {
-            canPickUp = true;
-            objectToDestroy = collision.gameObject;
-            Rigidbody rbObj = collision.gameObject.GetComponent<Rigidbody>();
-            if (rbObj != null)
+            // If the agent is not currently holding an object, it can pick up this object
+            if (pickedUpObject == null)
             {
-                rbObj.isKinematic = true;  // Make the object stationary
+                canPickUp = true;
             }
+
+            // This object can be considered for destruction as we are in contact with it
+            objectToDestroy = collision.gameObject;
         }
     }
 
     private void OnCollisionExit(Collision collision)
     {
-        // If the agent exits collision with a pickable object
-        if (collision.gameObject == pickedUpObject)
-        {
-            canPickUp = false;
-            pickedUpObject = null;
-        }
+        // If we exit collision with a pickable object
         if (collision.gameObject.layer == LayerMask.NameToLayer("Pickable"))
         {
-            if (collision.gameObject == objectToDestroy)
+            // If we are leaving the object we could destroy, reset it
+            if (objectToDestroy == collision.gameObject)
             {
                 objectToDestroy = null;
+            }
+
+            // If we are not currently holding any object, we cannot pick up anything now since we're not in contact
+            if (pickedUpObject == null)
+            {
+                canPickUp = false;
             }
         }
     }
 
+
 // Function to pick up the object
     // Function to pick up the object
-private void PickUpObject()
+    private void PickUpObject()
 {
+    // Only pick up if currently allowed (in contact with an object) and not holding anything
     if (pickedUpObject == null && canPickUp)
     {
-        // Assuming the agent is colliding with a pickable object
+        // Find a pickable object within the agent's collider range
         Collider[] colliders = Physics.OverlapSphere(transform.position, 1f, LayerMask.GetMask("Pickable"));
         if (colliders.Length > 0)
         {
             pickedUpObject = colliders[0].gameObject;
 
-            // Save the object's original rotation
-            // Set the original rotation to (0, 0, 0)
-            startingRot = Quaternion.identity;
-
-            // Disable the object's physics and collider to prevent distortion and interference with Raycasts
+            // Disable physics on the picked up object
             Rigidbody rbPickable = pickedUpObject.GetComponent<Rigidbody>();
             if (rbPickable != null)
             {
@@ -631,23 +621,26 @@ private void PickUpObject()
             Collider objectCollider = pickedUpObject.GetComponent<Collider>();
             if (objectCollider != null)
             {
-                objectCollider.enabled = false; // Disable the collider
+                objectCollider.enabled = false; // Disable the collider so it doesn't interfere
             }
 
-            // Attach the object to the agent, ensuring no interference with the agent's collider
+            // Attach the object to the agent
             pickedUpObject.transform.SetParent(this.transform);
-            pickedUpObject.transform.localPosition = new Vector3(0, 1, 1); // Adjust as needed
-            pickedUpObject.transform.localRotation = Quaternion.identity; // Keeps the object aligned with the agent
-
-            // Set the object's scale to default (1,1,1) to prevent any distortion
+            pickedUpObject.transform.localPosition = new Vector3(0, 1, 1);
+            pickedUpObject.transform.localRotation = Quaternion.identity;
             pickedUpObject.transform.localScale = Vector3.one;
 
-            canPickUp = false; // The agent can no longer pick up until it drops the current object
+            // Once the agent has picked something up, it can no longer pick another immediately
+            canPickUp = false;
+        }
+        else
+        {
+            // If no overlapping pickable objects are found, it can't pick up
+            canPickUp = false;
         }
     }
 }
 
-// Function to drop the object
 private void DropObject()
 {
     if (pickedUpObject != null)
@@ -672,10 +665,11 @@ private void DropObject()
                 }
 
                 objectCollider.enabled = true;
-
                 pickedUpObject.transform.localScale = Vector3.one;
                 pickedUpObject = null;
-                canPickUp = true;
+
+                // After dropping an object, the agent must collide with another object before picking up again
+                canPickUp = false;
             }
             else
             {
@@ -684,6 +678,7 @@ private void DropObject()
         }
     }
 }
+
 
     // Function to handle prop creation based on propAction
     void CreatePropAction(int propAction)
@@ -971,159 +966,140 @@ private void DropObject()
 
 
 
-        public override void OnActionReceived(ActionBuffers actions)
+    public override void OnActionReceived(ActionBuffers actions)
+    {
+        if (castleArea.maleImmobility >= 1.0f && castleArea.m_ResetTimer % castleArea.MaxEnvSteps <= 400)
         {
-            // float moveRotate = actions.ContinuousActions[0];
-            // Debug.Log($"ROT PRED: {moveRotate}");
-            // float moveForward = actions.ContinuousActions[1];
-            // // Move the agent forward/backward
-            // if (rb != null)
-            // {
-            //     Vector3 moveDirection = transform.forward * moveForward * moveSpeed * Time.deltaTime;
-            //     rb.MovePosition(transform.position + moveDirection);
-            //     Debug.Log($"MOVE: {moveDirection}");
-            // }
-            //
-            // // Rotate the agent
-            // if (rb != null)
-            // {
-            //     float rotationAngle = moveRotate * rotateSpeed * Time.deltaTime; // Ensure rotation is frame-rate independent
-            //     rb.MoveRotation(rb.rotation * Quaternion.Euler(0f, rotationAngle, 0f)); // Usi
-            // }
-            
-            int moveDirection = actions.DiscreteActions[0];  // Discrete action for movement
-            int rotationDirection = actions.DiscreteActions[1];  // Discrete action for rotation
-            int discreteAction = actions.DiscreteActions[2]; // Pick up/drop/destroy actions
-            int propAction = actions.DiscreteActions[3];     
+            Debug.Log($"MaleAgent is immobile and training is paused at StepCount: {StepCount}");
+            return; // Prevents training for the first 400 steps
+        }
 
-            // Define movement and rotation step sizes
-            float moveStep = moveSpeed * Time.deltaTime;
-            float rotationStep = rotateSpeed * Time.deltaTime;  // Assuming you have a rotationSpeed variable
-            // Handle movement based on discrete actions
-            if (rb != null)
-            {
-                Vector3 moveVector = Vector3.zero;
+        // Get the chosen action from the single branch
+        int chosenAction = actions.DiscreteActions[0];
 
-                switch (moveDirection)
-                {
-                    case 0:
-                        // No movement
-                        // Debug.Log($"STOP: { moveStep}");
-                        break;
-                    case 1:
-                        // Move forward
-                        moveVector = transform.forward * moveStep;
-                        // Debug.Log($"FORWARD: { moveVector}");
-                        break;
-                    case 2:
-                        // Move backward
-                        moveVector = -transform.forward * moveStep;
-                        // Debug.Log($"BACK: { moveVector}");
-                        break;
-                    default:
-                        // No movement by default
-                        break;
-                }
-                // Debug.Log($"MOVE: { moveVector}");
+        // Define movement and rotation step sizes
+        float moveStep = moveSpeed * Time.deltaTime;
+        float rotationStep = rotateSpeed * Time.deltaTime;
 
-                // Apply movement
-                rb.MovePosition(transform.position + moveVector);
-            }
+        bool noBuildAction = false;
 
-            // Handle rotation based on discrete actions
-            if (rb != null)
-            {
-                float rotationAngle = 0f;
-
-                switch (rotationDirection)
-                {
-                    case 0:
-                        // No rotation
-                        break;
-                    case 1:
-                        // Rotate left
-                        rotationAngle = -rotationStep;
-                        break;
-                    case 2:
-                        // Rotate right
-                        rotationAngle = rotationStep;
-                        break;
-                    default:
-                        // No rotation by default
-                        break;
-                }
-
-                // Apply rotation
-                Quaternion deltaRotation = Quaternion.Euler(0f, rotationAngle * rotationStep , 0f);
-                Quaternion newRotation = rb.rotation * deltaRotation; // Apply the change in rotation relative to self
-
-                // Fix x and z axis rotations to 0, keeping only the y-axis rotation
-                newRotation = Quaternion.Euler(0f, newRotation.eulerAngles.y, 0f);
-
-                // Apply the constrained rotation to the Rigidbody
-                rb.MoveRotation(newRotation);
-                // Debug.Log($"ROTATION: {newRotation}");
-
-                // transform.Rotate(0f, rotationAngle, 0f, Space.Self);
-            }
-            
-            // Get the discrete actions for pick up and drop
-            bool pickUpAction;
-            bool dropAction;
-            bool noBuildAction = false;
-            if (discreteAction == 0)
-            {   
-                // Debug.Log("ACTION: PICKUP");
-                pickUpAction = true;
-                noBuildAction = true;
-            } else { pickUpAction = false;}
-            if (discreteAction == 1)
-            {
-                // Debug.Log("ACTION: DROP");
-                dropAction = true;
-                noBuildAction = true;
-            } else { dropAction = false;}
-            if (discreteAction == 2)
-            {
-                // Debug.Log("ACTION: NOTHING");
+        switch (chosenAction)
+        {
+            case 0:
+                // Do Nothing
+                // Add penalty for nothing action if desired
                 castleArea.m_Team1AgentGroup.AddGroupReward(penaltyForNothingAction);
-            }
+                break;
 
-            // If the pick-up action is selected and the agent can pick up, execute the pick-up
-            if (pickUpAction == true && canPickUp)
-            {
-                PickUpObject();
-            }
+            case 1:
+                // Move Forward
+                if (rb != null)
+                {
+                    Vector3 forwardMove = transform.forward * moveStep;
+                    rb.MovePosition(transform.position + forwardMove);
+                }
 
-            // If the drop action is selected and the agent is holding something, drop it
-            if (dropAction == true && pickedUpObject != null)
-            {
-                DropObject();
-            }
-            
-            if (discreteAction == 3)
-            {
+                break;
+
+            case 2:
+                // Move Backward
+                if (rb != null)
+                {
+                    Vector3 backwardMove = -transform.forward * moveStep;
+                    rb.MovePosition(transform.position + backwardMove);
+                }
+
+                break;
+
+            case 3:
+                // Rotate Left
+                if (rb != null)
+                {
+                    float rotationAngleLeft = -rotationStep * rotationStep;
+                    Quaternion leftRotation = rb.rotation * Quaternion.Euler(0f, rotationAngleLeft, 0f);
+                    leftRotation = Quaternion.Euler(0f, leftRotation.eulerAngles.y, 0f);
+                    rb.MoveRotation(leftRotation);
+                }
+
+                break;
+
+            case 4:
+                // Rotate Right
+                if (rb != null)
+                {
+                    float rotationAngleRight = rotationStep * rotationStep;
+                    Quaternion rightRotation = rb.rotation * Quaternion.Euler(0f, rotationAngleRight, 0f);
+                    rightRotation = Quaternion.Euler(0f, rightRotation.eulerAngles.y, 0f);
+                    rb.MoveRotation(rightRotation);
+                }
+
+                break;
+
+            case 5:
+                // Pick Up
+                if (canPickUp)
+                {
+                    PickUpObject();
+                }
+
+                noBuildAction = true;
+                Debug.Log($"Action: PICKUP. Currently holding: {(pickedUpObject == null ? "None" : pickedUpObject.name)}");
+
+                break;
+
+            case 6:
+                // Drop
+                if (pickedUpObject != null)
+                {
+                    DropObject();
+                }
+
+                noBuildAction = true;
+                break;
+
+            case 7:
+                // Destroy
                 DestroyObject();
                 noBuildAction = true;
-            }
-            
-            if (discreteAction == 4)
-            {
-                // **New:** Use stairs action
+                break;
+
+            case 8:
+                // Use Stairs
                 UseStairs();
                 noBuildAction = true;
-            }
-            
-            Debug.Log($"discreteaction build: {propAction}");
-            // discreteActionBuild = 0 is no build
-            if (propAction != 0 && noBuildAction == false)
-            {
-                // Build action
-                CreatePropAction(propAction);
-            }
-            
+                break;
+            // Build actions
+            case 9:
+                //column_mini
+                CreatePropAction(1);
+                break;
+            case 10:
+                // floor
+                CreatePropAction(2);
+                break;
+            case 11:
+                //floor_stairs Variant
+                CreatePropAction(3);
+                break;
+            case 12:
+                //wallPaint_half_mini
+                CreatePropAction(4);
+                break;
+            case 13:
+                // wallPaint_flat Variant
+                CreatePropAction(5);
+                break;
+
+            default:
+                Debug.LogError("Invalid prop action");
+                break;
+        }
+        
+        Debug.Assert(transform.childCount <= 2, $"Agent has more than one picked up object {transform.childCount}!");
+
+        
     }
-    
+
     public override void Heuristic(in ActionBuffers actionsOut)
     {
         ActionSegment<float> actionsMovement = actionsOut.ContinuousActions;
@@ -1195,5 +1171,55 @@ private void DropObject()
         
     }
     
+    /// <summary>
+    /// Calculates the enclosure reward at a given point.
+    /// </summary>
+    /// <param name="point">The point from which to cast rays.</param>
+    /// <returns>A reward value between 0 and 1.</returns>
+    public float CalculateEnclosureReward(Vector3 point)
+    {
+        int hitCount = 0;
+
+        for (int i = 0; i < numberOfRays; i++)
+        {
+            // Calculate the direction of the ray
+            float angle = i * (360f / numberOfRays);
+            Vector3 direction = Quaternion.Euler(0, angle, 0) * Vector3.forward;
+
+            // Perform the raycast
+            Ray ray = new Ray(point, direction);
+            RaycastHit hit;
+
+            if (Physics.Raycast(ray, out hit, rayDistance))
+            {
+                // If we hit something, draw the ray only up to the hit point
+                Debug.DrawRay(point, direction * hit.distance, Color.red, 0.1f);
+    
+                // Check if it's a wall
+                if (hit.collider.CompareTag(wallTag))
+                {
+                    hitCount++;
+                }
+            }
+            else
+            {
+                // If we didn't hit anything, draw the full length
+                Debug.DrawRay(point, direction * rayDistance, Color.red, 0.1f);
+            }
+        }
+
+        // Calculate the proportion of rays that hit walls
+        float hitProportion = (float)hitCount / numberOfRays;
+
+        // Calculate the reward based on the hit proportion
+        float reward = Mathf.Clamp01(hitProportion / enclosureThreshold)/10000;
+
+        return reward;
+    }
+    
     
 }
+
+
+
+

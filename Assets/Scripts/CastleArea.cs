@@ -18,7 +18,7 @@ public class CastleArea : MonoBehaviour
     public Material successMaterial;
     public Material failureMaterial;
     public TextMeshPro scoreText;
-    private int m_ResetTimer;
+    public int m_ResetTimer;
     public int MaxEnvSteps = 1000;
     private int MaxTraining = 10000;
     private float rangeZ = 8;
@@ -184,14 +184,18 @@ public class CastleArea : MonoBehaviour
         if (m_ResetTimer % MaxEnvSteps >= 400)
         {
             maleImmobility = 0.0f;
-            targetCountM = 2;
+            targetCountM = 4;
             targetCountF = 4;
+            CreateFoodPropMale(transform);
+            CreateFoodPropFemale(transform);
         }
         else
         {
             maleImmobility = 1.0f;
             targetCountM = 0;
-            targetCountF = 2;
+            targetCountF = 6;
+            CreateFoodPropMale(transform);
+            CreateFoodPropFemale(transform);
         }
         
         if (m_ResetTimer % MaxEnvSteps == 0)
@@ -364,32 +368,24 @@ public class CastleArea : MonoBehaviour
         if (propPrefab != null)
         {
             // Instantiate the prefab in the scene at the origin
-            Instantiate(propPrefab, Vector3.zero, Quaternion.identity);
+            GameObject newProp = Instantiate(propPrefab, transform, false);
+            // Set the layer of the new prop to 
+            if (propName != "SphereF" && propName != "SphereM")
+            {
+                newProp.layer = LayerMask.NameToLayer("Pickable");   
+            }
+            
+
+            // Return the newly created GameObject
+            return newProp;
         }
         else
         {
             Debug.LogError($"Could not find the prop '{propName}' in the Props folder.");
+            return null;
         }
+        
 
-        // Load the prefab from the Props folder
-        // GameObject propPrefab = Resources.Load<GameObject>($"Prefabs/{propName}");
-        // if (propPrefab == null)
-        // {
-        //     Debug.LogError($"Could not find the prop '{propName}' in the Props folder.");
-        //     return null;
-        // }
-
-        // Create the prop in the environment
-        GameObject newProp = Instantiate(propPrefab, position, rotation);
-
-        // Set the layer of the new prop to 
-        if (propName != "SphereF" && propName != "SphereM")
-        {
-            newProp.layer = LayerMask.NameToLayer("Pickable");   
-        }
-
-        // Return the newly created GameObject
-        return newProp;
     }
     
     private void removeTarget(List<GameObject> targetsToDelete)
@@ -419,13 +415,13 @@ public class CastleArea : MonoBehaviour
             Quaternion rotation = transform.localRotation;
 
             // Create a 'floor' prop at the calculated position and rotation
+            Debug.Log("Creating Food Prop Male");
             GameObject newTarget = CreateProp("SphereM", randomLocalPosition, rotation);
-            
-            newTarget.transform.SetParent(envLocation, false);
-            Debug.Log($"envlocation: {envLocation.gameObject.name}");
             RandomlyPlaceObject(newTarget,  rangeX, rangeZ, 20, transform);
-            // newTarget.transform.parent = envLocation;
-            newTarget.transform.localPosition.Scale(transform.localScale);
+            // newTarget.transform.SetParent(envLocation, false);
+            // Debug.Log($"envlocation: {envLocation.gameObject.name}");
+            // // newTarget.transform.parent = envLocation;
+            // newTarget.transform.localPosition.Scale(transform.localScale);
             spawnedTargetListM.Add(newTarget);
             // Debug.Log("Created sphere");
         }
@@ -446,16 +442,16 @@ public class CastleArea : MonoBehaviour
         {
             // Debug.Log($"Create ball F no: {i} to {targetCount}");
             Vector3 randomLocalPosition =
-                new Vector3(UnityEngine.Random.Range(-20, 20), 0, UnityEngine.Random.Range(-7, 7));
+                new Vector3(UnityEngine.Random.Range(-rangeX, rangeX), 0, UnityEngine.Random.Range(-rangeZ, rangeZ));
             // Keep the rotation the same as the agent's rotation
             Quaternion rotation = transform.localRotation;
 
             // Create a 'floor' prop at the calculated position and rotation
+            Debug.Log("Create food prop female");
             GameObject newTarget = CreateProp("SphereF", randomLocalPosition, rotation);
-            newTarget.transform.SetParent(envLocation, false);
             RandomlyPlaceObject(newTarget,  rangeX, rangeZ, 20, transform);
-            
-            newTarget.transform.localPosition.Scale(transform.localScale);
+            // newTarget.transform.SetParent(envLocation, false);
+            // newTarget.transform.localPosition.Scale(transform.localScale);
             spawnedTargetListF.Add(newTarget);
             // Debug.Log("Created sphere");
         }
@@ -493,9 +489,16 @@ public class CastleArea : MonoBehaviour
         bool colliderWasEnabled = objCollider.enabled;
         objCollider.enabled = false;
 
-        // Calculate test radius 10% larger than the collider extents
-        float testRadius = GetColliderRadius(objectToPlace) * 1.1f;
-
+        // Collision detection varies depending on the type of the object 
+         
+        // Spherical objects: Calculate test radius 10% larger than the collider extents
+        // Small buffer to ensure no overlap
+        float buffer = 0.5f;
+        float testRadius = GetColliderRadius(objectToPlace) * 1.1f + buffer;
+        
+        // Rectangular objects: Calculate half of the collider size in each dimension 
+        Vector3 halfSize = objectToPlace.gameObject.transform.localScale / 2;
+        
         // Set a random rotation (local rotation relative to Env)
         objectToPlace.transform.localRotation = Quaternion.Euler(
             new Vector3(0f, UnityEngine.Random.Range(0f, 360f), 0f)
@@ -514,7 +517,7 @@ public class CastleArea : MonoBehaviour
             );
 
             // Check if the position is open (relative to Env's local position)
-            if (CheckIfPositionIsOpen(randomLocalPosition, testRadius, envTransform, objectToPlace))
+            if (CheckIfPositionIsOpen(randomLocalPosition, testRadius, halfSize, envTransform, objectToPlace))
             {
                 // Set the object's local position relative to the Env
                 objectToPlace.transform.localPosition = randomLocalPosition;
@@ -539,6 +542,10 @@ public class CastleArea : MonoBehaviour
         if (placedSuccessfully)
         {
             // Optionally, perform additional setup after successful placement
+        }
+        else
+        {
+            objectToPlace.GetComponent<Renderer>().material.color = Color.red;
         }
     }
 
@@ -590,20 +597,49 @@ public class CastleArea : MonoBehaviour
     /// <returns>The local space radius around the collider</returns>
     private static float GetColliderRadius(GameObject obj)
     {
+        // Collider col = obj.GetComponent<Collider>();
+        //
+        // Vector3 boundsSize = Vector3.zero; 
+        // if (col.GetType() == typeof(MeshCollider))
+        // {
+        //     boundsSize = ((MeshCollider)col).sharedMesh.bounds.size;
+        // }
+        // else if (col.GetType() == typeof(BoxCollider))
+        // {
+        //     boundsSize = col.bounds.size;
+        // }
+        //
+        // boundsSize.Scale(obj.transform.localScale);
+        // return Mathf.Max(boundsSize.x, boundsSize.z) / 2f;
+        // NEW COPIED FUNCTION
+        
         Collider col = obj.GetComponent<Collider>();
 
-        Vector3 boundsSize = Vector3.zero; 
-        if (col.GetType() == typeof(MeshCollider))
+        if (col is SphereCollider sphereCollider)
         {
-            boundsSize = ((MeshCollider)col).sharedMesh.bounds.size;
+            // Account for lossy scale to calculate world-space radius
+            return sphereCollider.radius * Mathf.Max(
+                obj.transform.lossyScale.x,
+                obj.transform.lossyScale.y,
+                obj.transform.lossyScale.z
+            );
         }
-        else if (col.GetType() == typeof(BoxCollider))
+        else if (col is BoxCollider boxCollider)
         {
-            boundsSize = col.bounds.size;
+            // Approximate radius as the maximum half-extent
+            Vector3 halfExtents = boxCollider.size / 2;
+            halfExtents.Scale(obj.transform.lossyScale);
+            return Mathf.Max(halfExtents.x, halfExtents.z);
+        }
+        else if (col is MeshCollider meshCollider && meshCollider.sharedMesh != null)
+        {
+            Vector3 boundsSize = meshCollider.sharedMesh.bounds.size;
+            boundsSize.Scale(obj.transform.lossyScale);
+            return Mathf.Max(boundsSize.x, boundsSize.z) / 2f;
         }
 
-        boundsSize.Scale(obj.transform.localScale);
-        return Mathf.Max(boundsSize.x, boundsSize.z) / 2f;
+        Debug.LogError("Unsupported collider type!");
+        return 0f;
     }
     
     /// <summary>
@@ -628,13 +664,30 @@ public class CastleArea : MonoBehaviour
     //     return true;
     // }
     
-    private bool CheckIfPositionIsOpen(Vector3 localPosition, float testRadius, Transform envTransform, GameObject objectToPlace)
+    private bool CheckIfPositionIsOpen(Vector3 localPosition, float testRadius, Vector3 halfSize, Transform envTransform, GameObject objectToPlace)
     {
         // Convert the test local position to world position
         Vector3 testWorldPosition = envTransform.TransformPoint(localPosition);
 
-        // Perform an overlap sphere check
-        Collider[] colliders = Physics.OverlapSphere(testWorldPosition, testRadius);
+        // Collision check depends on the shape of the object
+        Collider[] colliders; 
+        // Assume that SphereM and SphereF are the only Spherical objects that can be spawned
+        String objectToPlaceTag = objectToPlace.tag;
+        if (objectToPlaceTag.Equals("SphereM") || objectToPlaceTag.Equals("SphereF"))
+        {
+            Vector3 lossyScale = objectToPlace.transform.lossyScale;
+            float worldRadius = testRadius * Mathf.Max(
+                lossyScale.x,
+                lossyScale.y,
+                lossyScale.z
+            );
+            colliders = Physics.OverlapSphere(testWorldPosition, worldRadius); 
+        }
+        // Assume the only other object shapes are boxes 
+        else
+        {
+            colliders = Physics.OverlapBox(testWorldPosition, halfSize);
+        }
 
         foreach (var collider in colliders)
         {
@@ -642,12 +695,11 @@ public class CastleArea : MonoBehaviour
             if (collider.gameObject == objectToPlace)
                 continue;
 
-            // Exclude agents carrying objects
-            if (collider.CompareTag("Female") || collider.CompareTag("Male"))
-                continue;
-
             // Optionally, exclude triggers if necessary
             if (collider.isTrigger)
+                continue;
+
+            if (collider.CompareTag("Floor"))
                 continue;
 
             // If any other collider is found, the position is not open
